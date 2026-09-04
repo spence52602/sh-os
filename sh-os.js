@@ -99,7 +99,7 @@
     g4(255.93, 255.93, 1437.70, 507.86).concat(['KEYBOARD', 'Play it · drag for glissando · Z–M / Q–U on QWERTY']),
     [739.74, 63.55, 1342.07, 158.59, 'KNOBS', 'Reverb · cutoff · BPM · volume — scroll or drag to turn'],
     g4(1355.82, 2.29, 1437.70, 168.91).concat(['HELP · PREVIEW', 'This guide · hear the current sound (knobs work while it plays)', 'right']),
-    [1490, 178, 1548, 300, 'LIMITER', 'Push the fader up for a louder, more clipped sound', 'right']
+    [1490, 178, 1548, 300, 'LIMITER', 'Coming soon: a Pro-L style limiter on the master', 'right']
   ];
 
   function pct(v, of) { return (v / of * 100).toFixed(3) + '%'; }
@@ -980,11 +980,10 @@
     refreshKnobs();
 
     // ---- LIMITER strip (right rail): a touch sensor on the real thing — drag up/down on it (or scroll); no handle, the screen shows the value
-    var fader = document.createElement('button'); fader.type = 'button'; fader.className = 'shos-fader'; fader.setAttribute('aria-label', 'Limiter strip — drag up');
+    var fader = document.createElement('button'); fader.type = 'button'; fader.className = 'shos-fader'; fader.setAttribute('aria-label', 'Limiter strip (coming soon)');
     place(fader, FADER.hit[0], FADER.hit[1], FADER.hit[2], FADER.hit[3]);
-    function pushTo(v) {
-      setParam('push', v); state.jamParam = 'push'; refreshJam();
-      pop(Math.round(PARAMS.push * 100) + '%', 'LIMITER · PRO-L STYLE', PARAMS.push); armIdle();
+    function pushTo(v) {                                                // parked: the strip answers "coming soon" until the limiter is thought through
+      pop('SOON', 'LIMITER · COMING SOON'); armIdle();                  // setParam('push', v) drives the Pro-L style worklet once it ships
     }
     fader.addEventListener('pointerenter', playClick);
     fader.addEventListener('wheel', function (ev) { ev.preventDefault(); unlock(); pushTo(PARAMS.push - ev.deltaY / 1000); }, { passive: false });
