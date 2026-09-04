@@ -92,6 +92,8 @@
 .shos-kp-bar{margin-top:3cqw;width:42%;height:.7cqw;background:#3A3A40;}
 .shos-kp-bar i{display:block;height:100%;background:#45A8F0;transition:width .08s linear;}
 .shos-knobpop.no-bar .shos-kp-bar{display:none;}
+.shos-kp-hint{margin-top:2.4cqw;font-size:1.9cqw;font-weight:400;letter-spacing:.12em;color:#9A9AA3;}
+.shos-kp-hint:empty{display:none;}
 
 /* knob position mark: rides the knob cap, turns with the value */
 .shos-knob-ind{position:absolute;pointer-events:none;border-radius:50%;will-change:transform;}

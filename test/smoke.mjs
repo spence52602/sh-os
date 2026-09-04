@@ -3,7 +3,7 @@
    net for refactors, not a test of the audio graph (test/browser.mjs covers that). */
 import assert from 'node:assert/strict';
 import { buildShape, SC_REF_BEAT_MS } from '../src/audio/sidechain.ts';
-import { buildFlutter, flutterPeriod, FLUTTER_DIVS } from '../src/audio/flutter.ts';
+import { buildFlutter, flutterDepth, flutterPeriod, FLUTTER_DIVS } from '../src/audio/flutter.ts';
 import { cutoffHz, DEFAULT_PARAMS } from '../src/audio/tuning.ts';
 import { COMMAND_KEYS, PIANO, QWERTY, GUIDE } from '../src/geometry.ts';
 import { STACK, WHY_COPY, BROWSE } from '../src/content.ts';
@@ -26,6 +26,7 @@ let stepF = 0; for (let i = 1; i < M; i++) stepF = Math.max(stepF, Math.abs(fl[i
 assert(stepF < 0.05, `flutter has a step of ${stepF.toFixed(3)}`);
 for (let i = peakAt + 1; i < M * 0.85; i++) assert(fl[i] <= fl[i - 1] + 1e-9, 'flutter fall is not monotonic');
 assert.equal(+flutterPeriod(8, 132).toFixed(4), +(60 / 132 / 2).toFixed(4));
+assert.equal(flutterDepth(0), 0); assert(flutterDepth(1) > 0.99); assert(Math.abs(flutterDepth(0.3) - 0.8) < 0.02, 'a third of the strip should be an audible pulse');
 assert.deepEqual([...FLUTTER_DIVS], [8, 16, 4]);
 assert.equal(DEFAULT_PARAMS.flutterDiv, 8);
 

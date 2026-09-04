@@ -202,9 +202,9 @@ export function createDevice(root: HTMLElement & { __shos?: ShOsInstance }, opts
 
   // ---- readout popup: a big centred value over whatever screen is showing while something turns; fades after you stop
   const knobPop = document.createElement('div'); knobPop.className = 'shos-knobpop';
-  knobPop.innerHTML = '<div class="shos-kp-val"></div><div class="shos-kp-label"></div><div class="shos-kp-bar"><i></i></div>';
+  knobPop.innerHTML = '<div class="shos-kp-val"></div><div class="shos-kp-label"></div><div class="shos-kp-bar"><i></i></div><div class="shos-kp-hint"></div>';
   screen.appendChild(knobPop);
-  const kpVal = knobPop.querySelector('.shos-kp-val') as HTMLElement, kpLabel = knobPop.querySelector('.shos-kp-label') as HTMLElement, kpBar = knobPop.querySelector('.shos-kp-bar i') as HTMLElement;
+  const kpVal = knobPop.querySelector('.shos-kp-val') as HTMLElement, kpLabel = knobPop.querySelector('.shos-kp-label') as HTMLElement, kpBar = knobPop.querySelector('.shos-kp-bar i') as HTMLElement, kpHint = knobPop.querySelector('.shos-kp-hint') as HTMLElement;
   let kpTimer = 0;
   const P = engine.params;
   const knobText = (p: KnobParam) => {
@@ -213,9 +213,9 @@ export function createDevice(root: HTMLElement & { __shos?: ShOsInstance }, opts
     if (p === 'cutoff') { const hz = cutoffHz(P.cutoff); return hz >= 1000 ? (hz / 1000).toFixed(1) + 'K' : String(Math.round(hz)); }
     return Math.round(P[p] * 100) + (p === 'reverb' ? '%' : '');
   };
-  /** pop(value, label[, 0..1]): the same big readout for knobs (with a position bar) and for jam keys (without). */
-  const pop = (value: string, label: string, v01?: number | null) => {
-    kpVal.textContent = value; kpLabel.textContent = label;
+  /** pop(value, label[, 0..1[, hint]]): the same big readout for knobs (with a position bar) and for jam keys (without). */
+  const pop = (value: string, label: string, v01?: number | null, hint = '') => {
+    kpVal.textContent = value; kpLabel.textContent = label; kpHint.textContent = hint;
     knobPop.classList.toggle('no-bar', v01 === undefined || v01 === null);
     if (v01 !== undefined && v01 !== null) kpBar.style.width = (v01 * 100).toFixed(1) + '%';
     knobPop.classList.add('is-on');
@@ -433,7 +433,7 @@ export function createDevice(root: HTMLElement & { __shos?: ShOsInstance }, opts
   place(strip, FADER.hit[0], FADER.hit[1], FADER.hit[2], FADER.hit[3]);
   const flutterTo = (v: number) => {
     engine.setParam('flutter', v); refreshJam();
-    pop(Math.round(P.flutter * 100) + '%', 'FLUTTER · 1/' + P.flutterDiv, P.flutter); armIdle();
+    pop(Math.round(P.flutter * 100) + '%', 'FLUTTER · 1/' + P.flutterDiv, P.flutter, 'TAP THE STRIP FOR 1/8 · 1/16 · 1/4'); armIdle();
   };
   strip.addEventListener('pointerenter', playClick);
   strip.addEventListener('wheel', (ev) => { ev.preventDefault(); engine.unlock(); flutterTo(P.flutter - ev.deltaY / 1000); }, { passive: false });
@@ -446,7 +446,7 @@ export function createDevice(root: HTMLElement & { __shos?: ShOsInstance }, opts
     flutterTo(fd.v + dy / travel);
   });
   const stripEnd = () => {
-    if (fd && !fd.moved) { const div = engine.cycleFlutterDiv(); refreshJam(); pop('1/' + div, 'FLUTTER · RATE'); armIdle(); }   // a tap steps 1/8 → 1/16 → 1/4
+    if (fd && !fd.moved) { const div = engine.cycleFlutterDiv(); refreshJam(); pop('1/' + div, 'FLUTTER · RATE', null, 'DRAG UP TO MIX IT IN'); armIdle(); }   // a tap steps 1/8 → 1/16 → 1/4
     fd = null; strip.classList.remove('is-down');
   };
   strip.addEventListener('pointerup', stripEnd); strip.addEventListener('pointercancel', () => { fd = null; strip.classList.remove('is-down'); }); strip.addEventListener('lostpointercapture', () => { fd = null; strip.classList.remove('is-down'); });

@@ -2,13 +2,13 @@
    Owns the context and every node, the sample cache, voices, the four loop slots, the preview phrase, the beat clock,
    the metronome, the sidechain scheduler and the limiter worklet. It knows nothing about the DOM: the device
    (device.ts) calls into it and reads its state to draw screens. Graph: notes and previews → synth bus → 2 × lowpass
-   (CUTOFF) → dry + convolver send (REVERB) → sidechain gain (last, so tails pump) → master (VOLUME) → limiter → out.
-   Loops and clicks go straight to the master; FLUTTER (a beat-locked gate) sits between the master and the limiter.
+   (CUTOFF) → dry + convolver send (REVERB) → sidechain gain (so tails pump) → FLUTTER gate → master (VOLUME) → limiter.
+   Loops and clicks go straight to the master, so the drums never pass through the sidechain or the flutter.
    Sidechain and flutter shapes live in sidechain.ts / flutter.ts, tables and math in tuning.ts. */
 import type { LoopFamily, ParamName, Params, SoundName } from '../types.ts';
 import { pad2 } from '../geometry.ts';
 import { buildShape, scCurve } from './sidechain.ts';
-import { FLUTTER_DIVS, buildFlutter, flutterCurve, flutterPeriod } from './flutter.ts';
+import { FLUTTER_DIVS, buildFlutter, flutterCurve, flutterDepth, flutterPeriod } from './flutter.ts';
 import { BPM_MAX, BPM_MIN, DEFAULT_PARAMS, FILTER_Q, LOOPS, LOOP_BPM, LOOP_ORDER, MASTER, NOTE_LOOP, PREVIEW_BEATS, PREVIEW_BPM, SOUNDS, SOUND_ORDER, cutoffHz, noteName } from './tuning.ts';
 
 interface Voice { src: AudioBufferSourceNode; g: GainNode; t0: number; lvl: number; }
@@ -34,7 +34,7 @@ export class Engine {
   convolver: ConvolverNode | null = null;
   loopBus: GainNode | null = null;
   clickBus: GainNode | null = null;
-  /** The FLUTTER gate: the whole mix passes through it on the way to the limiter. */
+  /** The FLUTTER gate: the last stage of the synth chain, before the master; drums bypass it. */
   flutterGain: GainNode | null = null;
   /** Analysers feeding the PLAY screen oscilloscope: the synth chain and the whole mix. */
   scopeSynth: AnalyserNode | null = null;
@@ -71,9 +71,7 @@ export class Engine {
     const C = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!C) return null;
     const ac = (this.ac = new C());
-    const master = (this.master = ac.createGain()); master.gain.value = this.masterTarget();
-    const flutterGain = (this.flutterGain = ac.createGain()); flutterGain.gain.value = 1;
-    master.connect(flutterGain); flutterGain.connect(ac.destination);
+    const master = (this.master = ac.createGain()); master.gain.value = this.masterTarget(); master.connect(ac.destination);
     this.initLimiter(ac);
     const synthBus = (this.synthBus = ac.createGain());
     const scGain = (this.scGain = ac.createGain()); scGain.gain.value = 1;
@@ -83,9 +81,10 @@ export class Engine {
     const convolver = (this.convolver = ac.createConvolver());
     const wetGain = (this.wetGain = ac.createGain()); wetGain.gain.value = this.params.reverb;
     filter2.connect(wetGain); wetGain.connect(convolver); convolver.connect(scGain);
-    scGain.connect(master);
-    const scopeSynth = (this.scopeSynth = ac.createAnalyser()); scopeSynth.fftSize = 2048; scopeSynth.smoothingTimeConstant = 0; scGain.connect(scopeSynth);
-    const scopeMix = (this.scopeMix = ac.createAnalyser()); scopeMix.fftSize = 2048; scopeMix.smoothingTimeConstant = 0; flutterGain.connect(scopeMix);
+    const flutterGain = (this.flutterGain = ac.createGain()); flutterGain.gain.value = 1;
+    scGain.connect(flutterGain); flutterGain.connect(master);
+    const scopeSynth = (this.scopeSynth = ac.createAnalyser()); scopeSynth.fftSize = 2048; scopeSynth.smoothingTimeConstant = 0; flutterGain.connect(scopeSynth);
+    const scopeMix = (this.scopeMix = ac.createAnalyser()); scopeMix.fftSize = 2048; scopeMix.smoothingTimeConstant = 0; master.connect(scopeMix);
     this.loopBus = ac.createGain(); this.loopBus.connect(master);
     this.clickBus = ac.createGain(); this.clickBus.connect(master);
     return ac;
@@ -94,12 +93,12 @@ export class Engine {
   unlock(): void { const c = this.ctx(); if (c && c.state === 'suspended') void c.resume(); }
   ctxState(): string { return this.ac ? this.ac.state : 'none'; }
 
-  // ---- limiter (AudioWorklet after the flutter gate)
+  // ---- limiter (AudioWorklet on the master)
   private initLimiter(c: AudioContext): void {
     if (!c.audioWorklet || this.lim.ready) return;
     const url = this.assetBase.replace(/assets\/$/, '') + 'sh-os-limiter.js' + this.vq;
     c.audioWorklet.addModule(url).then(() => {
-      const tail = this.flutterGain;
+      const tail = this.master;
       if (this.ac !== c || !tail) return;                                                 // destroyed while loading
       const node = new AudioWorkletNode(c, 'shos-limiter', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
       const l = this.lim;
@@ -306,12 +305,14 @@ export class Engine {
     this.sc.next = this.nextBeat(c); this.scPump(); this.sc.timer = window.setInterval(this.scPump, 40);
   }
 
-  // ---- flutter scheduling: the same beat-locked curve idea as the sidechain, one curve per division
+  // ---- flutter scheduling: the same beat-locked curve idea as the sidechain, one curve per division. Each curve is
+  // built with the strip's amount at scheduling time, so turning the strip blends the depth in over the next beat
+  // instead of restarting the gate.
   private flPump = (): void => {
     const c = this.ac; if (!c || !this.flutterGain || this.params.flutter <= 0) return;
     const period = flutterPeriod(this.params.flutterDiv, this.params.bpm);
     while (this.fl.next < c.currentTime + 0.15) {
-      if (this.fl.next >= c.currentTime) { try { this.flutterGain.gain.setValueCurveAtTime(flutterCurve(this.fl.shape, this.params.flutter), this.fl.next, period * 0.995); } catch { /* overlapping curve: skip */ } }
+      if (this.fl.next >= c.currentTime) { try { this.flutterGain.gain.setValueCurveAtTime(flutterCurve(this.fl.shape, flutterDepth(this.params.flutter)), this.fl.next, period * 0.995); } catch { /* overlapping curve: skip */ } }
       this.fl.next += period;
     }
   };
@@ -362,7 +363,7 @@ export class Engine {
     if (name === 'cutoff' && this.filter && this.filter2) { const hz = cutoffHz(v); this.filter.frequency.setTargetAtTime(hz, t, 0.02); this.filter2.frequency.setTargetAtTime(hz, t, 0.02); }
     if (name === 'volume' && this.master) this.master.gain.setTargetAtTime(this.masterTarget(), t, 0.02);
     if (name === 'sidechain') { this.unlock(); this.scReschedule(); }
-    if (name === 'flutter') { this.unlock(); this.flReschedule(); }
+    if (name === 'flutter') { this.unlock(); if (v <= 0 || !this.fl.timer) this.flReschedule(); }   // running: the next curves pick the new depth up
   }
 
   // ---- diagnostics (used by the tests and the debug API)
@@ -395,7 +396,7 @@ export class Engine {
       };
     });
   }
-  /** 1 ms RMS envelope of the mix after the flutter gate, for `sec` seconds: shows the stutter pattern. */
+  /** 1 ms RMS envelope of the synth chain after the flutter gate, for `sec` seconds: shows the stutter pattern. */
   mixEnv(sec: number): Promise<number[]> {
     const c = this.ctx(); if (!c || !this.flutterGain) return Promise.reject(new Error('no audio'));
     const src = this.flutterGain;
@@ -414,10 +415,10 @@ export class Engine {
       };
     });
   }
-  /** Peak / rms over `sec` seconds at the output (post-limiter), or before the limiter when `pre` is set. */
+  /** Peak / rms over `sec` seconds at the output (post-limiter), or at the master (pre-limiter) when `pre` is set. */
   peak(sec: number, pre = false): Promise<PeakReport> {
-    const c = this.ctx(); if (!c || !this.flutterGain) return Promise.reject(new Error('no audio'));
-    const src: AudioNode = (!pre && this.lim.node) || this.flutterGain;
+    const c = this.ctx(); if (!c || !this.master) return Promise.reject(new Error('no audio'));
+    const src: AudioNode = (!pre && this.lim.node) || this.master;
     return new Promise((resolve) => {
       const n = Math.ceil(sec * c.sampleRate); let k = 0, peak = 0, over = 0, sum = 0;
       const proc = c.createScriptProcessor(4096, 2, 1), sink = c.createGain(); sink.gain.value = 0; sink.connect(c.destination);

@@ -10,7 +10,7 @@ Live: https://payments-api-spencehoellen.vercel.app/sh-os/ (the same bundle is e
 - **SOUND** steps PAD → LEAD → BASS. **PREVIEW** loops a 4-bar phrase of the current sound, in time with the drums.
 - **KICK / CLAP / HAT / TOP** each step 1 → 2 → 3 → off and launch on the next bar. **METRO** ticks. **STOP** (or the space bar) silences everything.
 - **Knobs**: REVERB, CUTOFF (40 Hz to 20 kHz), BPM (60 to 180, everything follows), VOLUME, and SIDECHAIN (the small knob by MUTE: a Kickstart-style duck on the synth).
-- **FLUTTER**: the touch strip on the right rail. Drag up to gate the whole mix on the beat (stutter-house chops), tap to step the rate 1/8 → 1/16 → 1/4. The shape is a hard ramp up and a curved ramp down, per Spence's sketch.
+- **FLUTTER**: the touch strip on the right rail. Drag up to mix a beat-locked gate into the synth (the drums stay dry), tap to step the rate 1/8 → 1/16 → 1/4. The shape is a hard ramp up and a curved ramp down, per Spence's sketch, and the amount follows a dB curve so it blends in from a light pulse to full chops.
 - **DESIGN / AI / BUILD / SHIP** show the stack. **WHY?** tells the backstory. The **GitHub** key opens this repo. **HELP** overlays a guide. The clock in the footer cycles light, dark and glow.
 - On phones the device is there to look at; a tap says so. Play it on a desktop browser.
 
@@ -41,7 +41,7 @@ Live: https://payments-api-spencehoellen.vercel.app/sh-os/ (the same bundle is e
 | `assets/` | Device renders (light, dark, glow), screen SVGs, cursor, audio. |
 | `test/` | `smoke.mjs` checks the pure modules in Node; `browser.mjs` drives the instrument in headless Chromium. |
 
-Audio graph: notes and previews → synth bus → two cascaded lowpass filters (Q 0.54 and 2.2, close to a 24 dB ladder with a little resonance) → dry plus a reverb send (convolution with an impulse captured from ValhallaVintageVerb) → sidechain gain, last in the synth chain so tails pump too → master → FLUTTER gate → safety limiter (peaks held at −0.18 dBFS, 1.5 ms lookahead, 60 ms release) → output. Loops and the metronome go straight to the master.
+Audio graph: notes and previews → synth bus → two cascaded lowpass filters (Q 0.54 and 2.2, close to a 24 dB ladder with a little resonance) → dry plus a reverb send (convolution with an impulse captured from ValhallaVintageVerb) → sidechain gain, so tails pump too → FLUTTER gate → master → safety limiter (peaks held at −0.18 dBFS, 1.5 ms lookahead, 60 ms release) → output. Loops and the metronome go straight to the master, so neither the sidechain nor the flutter touches the drums.
 
 Timing: launches quantise to the next bar of a shared beat clock. A BPM change rebases the clock and every playback rate at the same instant, so loops, previews, the sidechain and the flutter stay locked.
 

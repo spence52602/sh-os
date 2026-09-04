@@ -37,5 +37,9 @@ export function flutterCurve(shape: Float32Array, amount: number): Float32Array 
   return out;
 }
 
+/** Strip amount → gate depth on a dB curve, so the effect mixes in gradually: 30% is a −14 dB pulse, 70% a −34 dB chop,
+ *  100% closes fully. A linear blend only became audible past the halfway point. */
+export const flutterDepth = (amount: number): number => 1 - Math.pow(10, -2.4 * Math.max(0, Math.min(1, amount)));
+
 /** Period in seconds for a division at a tempo: 1/4 = a beat, 1/8 = half, 1/16 = a quarter. */
 export const flutterPeriod = (div: number, bpm: number): number => (60 / bpm) * 4 / div;

@@ -185,6 +185,7 @@
     for (let i = 0; i < out.length; i++) out[i] = 1 - amount * (1 - shape[i]);
     return out;
   }
+  var flutterDepth = (amount) => 1 - Math.pow(10, -2.4 * Math.max(0, Math.min(1, amount)));
   var flutterPeriod = (div, bpm) => 60 / bpm * 4 / div;
 
   // src/audio/tuning.ts
@@ -228,7 +229,7 @@
       this.convolver = null;
       this.loopBus = null;
       this.clickBus = null;
-      /** The FLUTTER gate: the whole mix passes through it on the way to the limiter. */
+      /** The FLUTTER gate: the last stage of the synth chain, before the master; drums bypass it. */
       this.flutterGain = null;
       /** Analysers feeding the PLAY screen oscilloscope: the synth chain and the whole mix. */
       this.scopeSynth = null;
@@ -273,7 +274,9 @@
           this.sc.next += this.beatLen();
         }
       };
-      // ---- flutter scheduling: the same beat-locked curve idea as the sidechain, one curve per division
+      // ---- flutter scheduling: the same beat-locked curve idea as the sidechain, one curve per division. Each curve is
+      // built with the strip's amount at scheduling time, so turning the strip blends the depth in over the next beat
+      // instead of restarting the gate.
       this.flPump = () => {
         const c = this.ac;
         if (!c || !this.flutterGain || this.params.flutter <= 0) return;
@@ -281,7 +284,7 @@
         while (this.fl.next < c.currentTime + 0.15) {
           if (this.fl.next >= c.currentTime) {
             try {
-              this.flutterGain.gain.setValueCurveAtTime(flutterCurve(this.fl.shape, this.params.flutter), this.fl.next, period * 0.995);
+              this.flutterGain.gain.setValueCurveAtTime(flutterCurve(this.fl.shape, flutterDepth(this.params.flutter)), this.fl.next, period * 0.995);
             } catch (e) {
             }
           }
@@ -299,10 +302,7 @@
       const ac = this.ac = new C();
       const master = this.master = ac.createGain();
       master.gain.value = this.masterTarget();
-      const flutterGain = this.flutterGain = ac.createGain();
-      flutterGain.gain.value = 1;
-      master.connect(flutterGain);
-      flutterGain.connect(ac.destination);
+      master.connect(ac.destination);
       this.initLimiter(ac);
       const synthBus = this.synthBus = ac.createGain();
       const scGain = this.scGain = ac.createGain();
@@ -324,15 +324,18 @@
       filter2.connect(wetGain);
       wetGain.connect(convolver);
       convolver.connect(scGain);
-      scGain.connect(master);
+      const flutterGain = this.flutterGain = ac.createGain();
+      flutterGain.gain.value = 1;
+      scGain.connect(flutterGain);
+      flutterGain.connect(master);
       const scopeSynth = this.scopeSynth = ac.createAnalyser();
       scopeSynth.fftSize = 2048;
       scopeSynth.smoothingTimeConstant = 0;
-      scGain.connect(scopeSynth);
+      flutterGain.connect(scopeSynth);
       const scopeMix = this.scopeMix = ac.createAnalyser();
       scopeMix.fftSize = 2048;
       scopeMix.smoothingTimeConstant = 0;
-      flutterGain.connect(scopeMix);
+      master.connect(scopeMix);
       this.loopBus = ac.createGain();
       this.loopBus.connect(master);
       this.clickBus = ac.createGain();
@@ -347,12 +350,12 @@
     ctxState() {
       return this.ac ? this.ac.state : "none";
     }
-    // ---- limiter (AudioWorklet after the flutter gate)
+    // ---- limiter (AudioWorklet on the master)
     initLimiter(c) {
       if (!c.audioWorklet || this.lim.ready) return;
       const url = this.assetBase.replace(/assets\/$/, "") + "sh-os-limiter.js" + this.vq;
       c.audioWorklet.addModule(url).then(() => {
-        const tail = this.flutterGain;
+        const tail = this.master;
         if (this.ac !== c || !tail) return;
         const node = new AudioWorkletNode(c, "shos-limiter", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
         const l = this.lim;
@@ -767,7 +770,7 @@
       }
       if (name === "flutter") {
         this.unlock();
-        this.flReschedule();
+        if (v <= 0 || !this.fl.timer) this.flReschedule();
       }
     }
     // ---- diagnostics (used by the tests and the debug API)
@@ -826,7 +829,7 @@
         };
       });
     }
-    /** 1 ms RMS envelope of the mix after the flutter gate, for `sec` seconds: shows the stutter pattern. */
+    /** 1 ms RMS envelope of the synth chain after the flutter gate, for `sec` seconds: shows the stutter pattern. */
     mixEnv(sec) {
       const c = this.ctx();
       if (!c || !this.flutterGain) return Promise.reject(new Error("no audio"));
@@ -858,11 +861,11 @@
         };
       });
     }
-    /** Peak / rms over `sec` seconds at the output (post-limiter), or before the limiter when `pre` is set. */
+    /** Peak / rms over `sec` seconds at the output (post-limiter), or at the master (pre-limiter) when `pre` is set. */
     peak(sec, pre = false) {
       const c = this.ctx();
-      if (!c || !this.flutterGain) return Promise.reject(new Error("no audio"));
-      const src = !pre && this.lim.node || this.flutterGain;
+      if (!c || !this.master) return Promise.reject(new Error("no audio"));
+      const src = !pre && this.lim.node || this.master;
       return new Promise((resolve) => {
         const n = Math.ceil(sec * c.sampleRate);
         let k2 = 0, peak = 0, over = 0, sum = 0;
@@ -1462,9 +1465,9 @@
     };
     const knobPop = document.createElement("div");
     knobPop.className = "shos-knobpop";
-    knobPop.innerHTML = '<div class="shos-kp-val"></div><div class="shos-kp-label"></div><div class="shos-kp-bar"><i></i></div>';
+    knobPop.innerHTML = '<div class="shos-kp-val"></div><div class="shos-kp-label"></div><div class="shos-kp-bar"><i></i></div><div class="shos-kp-hint"></div>';
     screen.appendChild(knobPop);
-    const kpVal = knobPop.querySelector(".shos-kp-val"), kpLabel = knobPop.querySelector(".shos-kp-label"), kpBar = knobPop.querySelector(".shos-kp-bar i");
+    const kpVal = knobPop.querySelector(".shos-kp-val"), kpLabel = knobPop.querySelector(".shos-kp-label"), kpBar = knobPop.querySelector(".shos-kp-bar i"), kpHint = knobPop.querySelector(".shos-kp-hint");
     let kpTimer = 0;
     const P = engine.params;
     const knobText = (p) => {
@@ -1476,9 +1479,10 @@
       }
       return Math.round(P[p] * 100) + (p === "reverb" ? "%" : "");
     };
-    const pop = (value, label, v01) => {
+    const pop = (value, label, v01, hint = "") => {
       kpVal.textContent = value;
       kpLabel.textContent = label;
+      kpHint.textContent = hint;
       knobPop.classList.toggle("no-bar", v01 === void 0 || v01 === null);
       if (v01 !== void 0 && v01 !== null) kpBar.style.width = (v01 * 100).toFixed(1) + "%";
       knobPop.classList.add("is-on");
@@ -1883,7 +1887,7 @@
     const flutterTo = (v) => {
       engine.setParam("flutter", v);
       refreshJam();
-      pop(Math.round(P.flutter * 100) + "%", "FLUTTER · 1/" + P.flutterDiv, P.flutter);
+      pop(Math.round(P.flutter * 100) + "%", "FLUTTER · 1/" + P.flutterDiv, P.flutter, "TAP THE STRIP FOR 1/8 · 1/16 · 1/4");
       armIdle();
     };
     strip.addEventListener("pointerenter", playClick);
@@ -1914,7 +1918,7 @@
       if (fd && !fd.moved) {
         const div = engine.cycleFlutterDiv();
         refreshJam();
-        pop("1/" + div, "FLUTTER · RATE");
+        pop("1/" + div, "FLUTTER · RATE", null, "DRAG UP TO MIX IT IN");
         armIdle();
       }
       fd = null;
