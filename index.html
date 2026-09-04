@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- Demo page: the page chrome from the Figma "Mockup" frame around the SH-OS embed. The instrument itself is
+     sh-os.js + sh-os.css + assets/; a host page needs only the three lines in <main> and the two tags at the end. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SH-OS — Spence Hoellen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100;400;500&display=swap">
+<link rel="stylesheet" href="sh-os.css">
+<style>
+  /* Page chrome mirrors the Figma "Mockup" frame (1728 × 1117) — same class names as the Webflow page */
+  html,body{margin:0;background:#fff;color:#111;}
+  body{font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .shos-page{min-height:100vh;display:flex;flex-direction:column;color:#111;}
+  .shos-hdr{display:flex;justify-content:space-between;align-items:center;padding:44px 67px 0;font-size:14px;letter-spacing:.06em;text-transform:uppercase;}
+  .shos-hdr-l,.shos-hdr-r{display:flex;align-items:center;flex:1;}
+  .shos-hdr-r{justify-content:flex-end;}
+  .shos-name{width:267px;}
+  .shos-os{margin-right:166px;}
+  .shos-logo-bg{width:36px;height:22px;background:url(assets/logo-sh.svg) center/contain no-repeat;}
+  .shos-main{flex:1;display:flex;align-items:center;padding:96px 67px 64px;}
+  .shos-ftr{display:flex;justify-content:center;padding:0 0 42px;}
+  .shos-clock-bg{width:24px;height:24px;background:url(assets/icon-clock.svg) center/contain no-repeat;}
+  @media (max-width:900px){
+    .shos-hdr{padding:24px 20px 0;font-size:12px;}
+    .shos-name{width:auto;margin-right:24px;}
+    .shos-os{margin-right:24px;}
+    .shos-main{padding:40px 16px 32px;}
+  }
+  @media (max-width:560px){ .shos-title,.shos-os{display:none;} }
+</style>
+</head>
+<body>
+  <div class="shos-page">
+    <header class="shos-hdr">
+      <div class="shos-hdr-l"><span class="shos-name">Spence Hoellen</span><span class="shos-title">Design Engineer</span></div>
+      <div class="shos-logo-bg"></div>
+      <div class="shos-hdr-r"><span class="shos-os">SH-OS</span><span class="shos-ver">BETA v1.0</span></div>
+    </header>
+    <main class="shos-main">
+      <div data-shos data-assets="assets/"></div>
+    </main>
+    <footer class="shos-ftr"><div class="shos-clock-bg" data-shos-night></div></footer>
+  </div>
+  <script src="sh-os.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+/* SH-OS styles: the device stage, keys and caps, the screen (SVG + HTML screens, overlays, oscilloscope),
+   knobs, the limiter strip, cursor, night/glow modes. Sizes inside the screen use cqw so every screen scales with
+   the device; the page around the device is styled by the host (see index.html for the demo page chrome).
+   Drop-in: <div data-shos data-assets="…/sh-os/assets/"></div> + sh-os.js */
+
+.shos{
+  --shos-glow: 0 0 3px rgba(255,255,255,.14);
+  position:relative;width:100%;max-width:1594px;margin:0 auto;
+  font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  -webkit-user-select:none;user-select:none;
+}
+.shos-stage{position:relative;width:100%;aspect-ratio:1594/565.11;}
+.shos-device{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;}
+
+/* ---- screen ---- */
+.shos-screen{
+  position:absolute;overflow:hidden;
+  background:linear-gradient(135deg,#313335 0%,#06070B 100%);
+  border-radius:3% / 6%;
+}
+.shos-scr{
+  position:absolute;inset:0;opacity:0;
+  transform:scale(.985);
+  transition:opacity .22s ease,transform .32s cubic-bezier(.2,.7,.2,1);
+  filter:drop-shadow(var(--shos-glow));
+}
+.shos-scr svg{width:100%;height:100%;display:block;}
+.shos-scr.is-on{opacity:1;transform:scale(1);animation:shos-breathe 3.2s ease-in-out infinite;}
+.shos-screen.is-switching .shos-scr.is-on{animation:shos-flicker .26s steps(2,end) 1, shos-breathe 3.2s ease-in-out .3s infinite;}
+@keyframes shos-flicker{0%{opacity:.55}50%{opacity:.9}100%{opacity:1}}
+@keyframes shos-breathe{0%,100%{filter:drop-shadow(0 0 3px rgba(255,255,255,.14))}50%{filter:drop-shadow(0 0 4px rgba(255,255,255,.22))}}
+
+/* live overlays: clock on IDLE, note + key rail on PLAY (the matching static SVG bits are hidden by the runtime) */
+.shos-screen{container-type:inline-size;}
+.shos-ov{position:absolute;pointer-events:none;opacity:0;transition:opacity .2s ease;font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;color:#F0E8D2;line-height:1;letter-spacing:.08em;white-space:nowrap;filter:drop-shadow(var(--shos-glow));}
+.shos-ov.is-on{opacity:1;}
+.shos-date,.shos-time{font-weight:100;letter-spacing:.02em;}
+.shos-note{font-weight:100;letter-spacing:.02em;text-align:right;}
+.shos-t-ink{color:#E9E9EC;} .shos-t-crm{color:#F0E8D2;} .shos-t-blk{color:#000;filter:none;}
+.shos-t-med{font-weight:500;} .shos-t-reg{font-weight:400;} .shos-t-thin{font-weight:100;}
+.shos-t-wide{letter-spacing:.04em;} .shos-t-track{letter-spacing:.08em;}
+.shos-lk-icon svg{width:100%;height:100%;display:block;fill:none;stroke:#F0E8D2;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;font-family:'Geist Mono',ui-monospace,monospace;}
+.shos-rail b,.shos-rail span{font-weight:500;}
+.shos-rail b{background:#45A8F0;color:#000;padding:.5em .65em;filter:none;}
+.shos-rail span{color:#E9E9EC;}
+.shos-rail i{font-style:normal;color:#E9E9EC;margin:0 .7em;}
+.shos-tick{top:89.4%;width:.47%;height:3.75%;background:#45A8F0;border-radius:1px;transition:opacity .25s ease;}
+.shos-screen[data-screen="play"] .shos-tick.is-on{opacity:1;transition:opacity 0s;}
+
+/* PLAY — oscilloscope canvas over the design's wave area */
+.shos-scope{filter:drop-shadow(var(--shos-glow));}
+/* PLAY — jam layer */
+.shos-jam-row{font-weight:500;letter-spacing:.08em;}
+.shos-jam-row span{color:#E9E9EC;}
+.shos-jam-row b{background:#45A8F0;color:#000;font-weight:500;padding:.3em .55em;filter:none;}
+.shos-jam-val{text-align:right;transition:color .2s ease;}
+.shos-jam-val.is-hot{color:#F0E8D2;}
+.shos-jam-loops{font-weight:500;letter-spacing:.08em;}
+.shos-jam-loops span{color:#3A3A40;transition:color .2s ease;}
+.shos-jam-loops span.is-on{color:#F0E8D2;}
+.shos-jam-loops span.shos-jam-metro.is-on{color:#00E27D;}
+.shos-jam-loops i{font-style:normal;color:#3A3A40;margin:0 .55em;}
+
+/* STOP key breathes red while a preview or loops are running: that's how you stop it */
+.shos-glow{position:absolute;left:8%;top:8%;width:84%;height:84%;border-radius:50%;pointer-events:none;opacity:0;
+  background:radial-gradient(circle,rgba(245,69,58,.55) 0%,rgba(245,69,58,.28) 38%,rgba(245,69,58,0) 68%);
+  transition:opacity .3s ease;}
+.shos-key.is-glow .shos-glow{animation:shos-breathe-red 1.25s ease-in-out infinite alternate;}
+@keyframes shos-breathe-red{0%{opacity:.18}100%{opacity:1}}
+
+/* LIMITER touch strip on the right rail: drag up/down; no handle (the screen shows the value) */
+.shos-fader{position:absolute;border-radius:.6cqw;background:transparent;border:0;padding:0;margin:0;outline:none;-webkit-tap-highlight-color:transparent;touch-action:none;}
+.shos-fader:focus-visible{box-shadow:0 0 0 2px rgba(69,168,240,.9);}
+
+/* now-playing strip: top centre of every screen while anything loops */
+.shos-hud{position:absolute;left:50%;top:5%;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:.7cqw;pointer-events:none;white-space:nowrap;
+  font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;}
+.shos-hud b,.shos-hud .shos-mute{font-weight:500;font-size:2.4cqw;letter-spacing:.08em;line-height:1;padding:.6cqw 1cqw;border-radius:.4cqw;filter:none;}
+.shos-hud b{background:#45A8F0;color:#000;}
+.shos-hud b.crm{background:#F0E8D2;}
+.shos-hud b.grn{background:#00E27D;}
+.shos-hud .shos-mute{position:static;left:auto;top:auto;transform:none;display:none;opacity:1;}
+.shos-screen.is-muted .shos-hud .shos-mute{display:block;}
+
+/* knob readout: big centred value over the current screen while a knob turns */
+.shos-knobpop{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.8);opacity:0;pointer-events:none;transition:opacity .14s ease;
+  font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;}
+.shos-knobpop.is-on{opacity:1;transition-duration:.06s;}
+.shos-kp-val{font-weight:100;font-size:15cqw;line-height:1;letter-spacing:.02em;color:#F0E8D2;filter:drop-shadow(var(--shos-glow));}
+.shos-kp-label{margin-top:2.2cqw;font-size:3cqw;font-weight:500;letter-spacing:.16em;color:#E9E9EC;}
+.shos-kp-bar{margin-top:3cqw;width:42%;height:.7cqw;background:#3A3A40;}
+.shos-kp-bar i{display:block;height:100%;background:#45A8F0;transition:width .08s linear;}
+.shos-knobpop.no-bar .shos-kp-bar{display:none;}
+
+/* knob position mark: rides the knob cap, turns with the value */
+.shos-knob-ind{position:absolute;pointer-events:none;border-radius:50%;will-change:transform;}
+.shos-knob-ind::before{content:'';position:absolute;left:50%;top:10%;width:14%;height:14%;margin-left:-7%;border-radius:50%;background:#141414;opacity:.8;}
+
+/* HELP: an HTML screen in the same idiom */
+.shos-helpscr{padding:6.9% 4.4% 0;color:#E9E9EC;font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;line-height:1.25;}   /* explicit line-height: a host page's body line-height (Webflow: 20px) leaked into the header line and pushed the WHY? copy under the footer */
+.shos-hc{display:flex;justify-content:space-between;font-size:1.56cqw;font-weight:500;line-height:1.25;}
+.shos-hh{margin-top:4.5%;font-size:6.6cqw;font-weight:100;letter-spacing:.02em;line-height:1;color:#F0E8D2;}
+.shos-hb{margin-top:4%;}
+.shos-hb p{margin:0 0 1.5%;font-size:2.7cqw;font-weight:400;line-height:1.35;letter-spacing:.05em;white-space:nowrap;}
+.shos-hf{position:absolute;left:4.4%;right:4.4%;top:86%;display:flex;align-items:center;gap:2.2cqw;border-top:2px solid #3A3A40;padding-top:1.8%;font-size:2.2cqw;line-height:1;}
+.shos-hf b{background:#45A8F0;color:#000;font-weight:500;padding:.55em .75em;filter:none;}
+.shos-hf span{font-weight:400;color:#E9E9EC;}
+/* WHY?: the backstory in the same idiom, but a wrapping paragraph */
+.shos-whyscr .shos-hh,.shos-betascr .shos-hh,.shos-gitscr .shos-hh{font-size:5.2cqw;margin-top:2.8%;}
+.shos-whyscr .shos-hb{margin-top:2.4%;}
+.shos-whyscr .shos-hb p{white-space:normal;font-size:2.4cqw;line-height:1.4;letter-spacing:.03em;}
+/* STACK screens: the tools are the focus */
+.shos-tools{display:grid;grid-template-columns:1fr 1fr;column-gap:3cqw;row-gap:2.2cqw;margin-top:3.4%;}
+.shos-tools div{display:flex;flex-direction:column;gap:.6cqw;border-left:.4cqw solid #45A8F0;padding-left:1.6cqw;}
+.shos-tools b{font-size:3.6cqw;font-weight:500;letter-spacing:.02em;line-height:1.05;color:#F0E8D2;}
+.shos-tools span{font-size:1.7cqw;font-weight:400;letter-spacing:.08em;color:#9A9AA3;text-transform:uppercase;line-height:1.1;}
+/* GITHUB screen: the repo path reads as the object */
+.shos-gitscr .shos-hb p.shos-git-url{color:#F0E8D2;font-size:3.4cqw;font-weight:500;letter-spacing:.02em;margin-bottom:2.2%;}
+
+/* mute chip: lives at the screen's top-center, which every screen leaves empty */
+.shos-mute{left:50%;top:5%;transform:translateX(-50%);background:#F5453A;color:#000;font-weight:500;font-size:1.7cqw;letter-spacing:.08em;line-height:1;padding:.5cqw 1cqw;border-radius:.4cqw;filter:none;}
+.shos-screen.is-muted .shos-mute{opacity:1;}
+.shos-key.is-muted{background:rgba(0,0,0,.08);box-shadow:inset 0 2px 4px rgba(0,0,0,.18), inset 0 -1px 0 rgba(255,255,255,.35);}
+
+/* ---- night mode: a black panel wipes up beneath the page; page chrome goes white as it passes ---- */
+.shos-night{position:fixed;inset:0;z-index:-1;background:#000;transform:translateY(100%);transition:transform .9s cubic-bezier(.22,.72,.18,1);pointer-events:none;}
+body.shos-is-night .shos-night{transform:translateY(0);}
+.shos-page{position:relative;transition:background-color 0s linear .9s;}
+body.shos-is-night .shos-page{background-color:transparent;transition-delay:0s;}
+.shos-hdr{transition:color .5s ease 0s;}
+body.shos-is-night .shos-hdr{color:#fff;transition-delay:.55s;}
+.shos-logo-bg,.shos-clock-bg{transition:filter .5s ease 0s;}
+body.shos-is-night .shos-logo-bg{filter:invert(1);transition-delay:.55s;}
+body.shos-is-night .shos-clock-bg{filter:invert(1);transition-delay:.05s;}
+.shos-device-light{transition:opacity .9s ease .15s;}
+.shos-device-dark,.shos-device-glow{opacity:0;transition:opacity .9s ease .15s;}
+.shos-device-dark.is-on,.shos-device-glow.is-on{opacity:1;}
+/* glow mode (all-black device): light knob marks, light press/hover cues, the glow render under the caps */
+body.shos-is-night.shos-is-glow .shos-cap{background-image:var(--shos-dev-glow);}   /* outranks the night cap rule that follows */
+body.shos-is-glow .shos-knob-ind::before{background:#E9E9EC;}
+body.shos-is-glow .shos-key.is-down,body.shos-is-glow .shos-key:active{background:rgba(255,255,255,.07);box-shadow:inset 0 2px 4px rgba(0,0,0,.5);}
+body.shos-is-glow .shos-key:hover .shos-cap{box-shadow:0 0 .9cqw rgba(255,255,255,.14);}
+body.shos-is-night .shos.shos-dark-ready .shos-device-light{opacity:0;}
+html.shos-no-anim *{transition:none!important;}
+
+/* per-screen micro-animations (overlays, no SVG surgery) */
+.shos-rec-dot{position:absolute;left:4.4%;top:16.4%;width:2.1%;aspect-ratio:1;border-radius:50%;background:#F5453A;opacity:0;pointer-events:none;}
+.shos-screen[data-screen="rec"] .shos-rec-dot{opacity:1;animation:shos-blink 1s steps(1,end) infinite;}
+.shos-caret{position:absolute;left:13.7%;top:55.9%;width:.35%;height:4.7%;background:#F0E8D2;opacity:0;pointer-events:none;}
+.shos-screen[data-screen="rec"] .shos-caret{opacity:1;animation:shos-blink 1.1s steps(1,end) infinite;}
+@keyframes shos-blink{50%{opacity:0}}
+
+/* ---- keys (hit zones over the render) ---- */
+.shos-key{
+  position:absolute;border-radius:16%;cursor:pointer;
+  background:transparent;border:0;padding:0;margin:0;
+  -webkit-tap-highlight-color:transparent;outline:none;
+  transition:background .12s ease,box-shadow .12s ease;
+}
+.shos-key:focus-visible{box-shadow:0 0 0 2px rgba(69,168,240,.9);}
+.shos-key.is-down,.shos-key:active{
+  background:rgba(0,0,0,.075);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.18), inset 0 -1px 0 rgba(255,255,255,.35);
+}
+.shos-key--pill{border-radius:999px;}
+.shos-key--note{touch-action:none;}
+.shos-key--enc{border-radius:50%;cursor:ns-resize;}
+.shos-key--enc.is-down{background:rgba(0,0,0,.04);box-shadow:none;}
+
+/* ---- key caps: a crop of the render sits over each round cap, so hovering lifts the cap itself ---- */
+.shos-stage{container-type:inline-size;}
+.shos-cap{
+  position:absolute;pointer-events:none;border-radius:50%;opacity:0;
+  background-image:var(--shos-dev-light);background-repeat:no-repeat;background-size:100cqw auto;
+  will-change:transform;
+  transition:opacity .18s ease,box-shadow .18s ease,filter .18s ease;
+}
+body.shos-is-night .shos-cap{background-image:var(--shos-dev-dark);}
+.shos-cap--sq{border-radius:24%;}
+.shos-cap.is-live{opacity:1;}   /* the runtime eases the cap's scale (lift on hover, dip on press) — rigid, no lateral travel */
+.shos-key:hover .shos-cap,.shos-key:focus-visible .shos-cap{box-shadow:0 .2cqw .55cqw rgba(0,0,0,.2);filter:brightness(1.03);}
+.shos-key.is-down .shos-cap,.shos-key:active .shos-cap{box-shadow:0 .03cqw .1cqw rgba(0,0,0,.16);filter:brightness(.96);transition-duration:.07s;}
+body.shos-is-night .shos-key:hover .shos-cap{box-shadow:0 .22cqw .7cqw rgba(0,0,0,.65);}
+
+/* ---- HELP guide: callouts over each group of keys; keys stay live underneath ---- */
+.shos-screen{z-index:2;}
+.shos-guide{position:absolute;inset:0;z-index:1;opacity:0;pointer-events:none;background:rgba(255,255,255,.44);transition:opacity .28s ease;}
+.shos-guide.is-on{opacity:1;}
+body.shos-is-night .shos-guide{background:rgba(0,0,0,.52);}
+.shos-gbox{position:absolute;border:1.5px solid #141414;border-radius:.6cqw;}
+.shos-gtag{
+  position:absolute;left:.45cqw;top:.45cqw;display:block;max-width:calc(100% - .9cqw);box-sizing:border-box;
+  background:#141414;color:#fff;font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:clamp(9px,.72cqw,12px);line-height:1.4;letter-spacing:.08em;text-transform:uppercase;
+  padding:.4em .65em;border-radius:.3em;white-space:normal;
+}
+.shos-gtag--r{left:auto;right:.45cqw;max-width:none;width:max-content;}
+.shos-gtag b{display:block;font-weight:500;}
+.shos-gtag i{display:block;font-style:normal;font-weight:400;opacity:.82;}
+body.shos-is-night .shos-gbox{border-color:#fff;}
+body.shos-is-night .shos-gtag{background:#fff;color:#000;}
+.shos-guide-exit{
+  position:absolute;right:0;top:-3.1cqw;pointer-events:auto;
+  background:#141414;color:#fff;border:0;border-radius:.3em;
+  font:500 clamp(10px,.8cqw,13px)/1 'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;
+  padding:.75em 1em;transition:transform .15s ease,background .2s ease;
+}
+.shos-guide-exit:hover{transform:translateY(-1px);}
+.shos-guide-exit:active{transform:scale(.96);}
+body.shos-is-night .shos-guide-exit{background:#fff;color:#000;}
+
+/* ---- custom cursor (Figma node 47:2447): the shadow lives in CSS so it can drop on press ---- */
+/* hide the native pointer with a transparent cursor image rather than `none`: with `none`, browsers flash the
+   OS arrow for a frame whenever the element under the pointer restyles (the animating caps do that constantly) */
+html.shos-has-cursor,html.shos-has-cursor *,html.shos-has-cursor *::before,html.shos-has-cursor *::after{
+  cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAHElEQVR42u3BAQEAAAjDoNm/tEEOVF0AAADAsgcgPAACkdngMQAAAABJRU5ErkJggg==") 0 0,none!important;
+  -webkit-user-drag:none;   /* no native drag cursor can appear mid-gesture */
+}
+.shos-cursor{
+  position:fixed;left:0;top:0;width:38.67px;height:36.64px;z-index:2147483000;pointer-events:none;opacity:0;
+  transform:translate3d(-200px,-200px,0);will-change:transform;   /* moved on the compositor: no layout, no transition */
+  transition:opacity .15s ease;
+}
+.shos-cursor.is-on{opacity:1;}
+.shos-cursor i{position:absolute;left:0;top:0;width:100%;height:100%;background:no-repeat 0 0/100% 100%;display:block;}
+.shos-cursor-ar{transition:transform .13s cubic-bezier(.2,.7,.2,1);}         /* origin = hotspot, set by the runtime */
+.shos-cursor-sh{transition:opacity .13s ease;}                                /* pre-rendered drop shadow (black 45%, 4px) */
+.shos-cursor.is-down .shos-cursor-ar{transform:scale(.88);}
+.shos-cursor.is-down .shos-cursor-sh{opacity:0;}
+/* night mode keeps the cursor exactly as designed (no inversion) */
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion:reduce){
+  .shos-scr,.shos-scr.is-on,.shos-screen.is-switching .shos-scr.is-on{animation:none;transition:opacity .15s ease;transform:none;}
+  .shos-rec-dot,.shos-caret{animation:none!important;}
+}
+
+/* ---- phone: lift the screen above the device so it stays legible ---- */
+.shos-screen-ghost{position:absolute;display:none;background:linear-gradient(135deg,#313335 0%,#06070B 100%);border-radius:3% / 6%;pointer-events:none;}
+.shos.is-stacked .shos-screen-ghost{display:block;}
+@media (max-width:760px){
+  .shos.is-stacked .shos-screen{
+    position:relative;left:auto;top:auto;width:100%;height:auto;aspect-ratio:2/1;
+    border-radius:12px;margin-bottom:12px;
+  }
+  .shos.is-stacked .shos-stage{margin-top:0;}
+  .shos.is-stacked .shos-guide-exit{top:.8cqw;right:.8cqw;}
+}
