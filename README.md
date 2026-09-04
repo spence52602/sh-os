@@ -13,6 +13,14 @@ Live: https://payments-api-spencehoellen.vercel.app/sh-os/ (the same bundle is e
 - **LIMITER**: the touch strip on the right rail. Coming soon: dragging it says so while the design is thought through (the Pro-L style worklet is in the repo, parked).
 - **DESIGN / AI / BUILD / SHIP** show the stack. **WHY?** tells the backstory. The **GitHub** key opens this repo. **HELP** overlays a guide. The clock in the footer cycles light, dark and glow.
 
+## Designed and built start to finish
+
+- **Design**: the device, its three modes and every printed legend live in one Figma file. The screens are Figma frames too, exported with text outlined.
+- **From file to hit zones**: the renders are exported at 2x and composited; every key, knob and strip is placed from the file's own coordinates, so the pixel geometry of the export is the layout system.
+- **Engine**: a Web Audio graph with measured parts. The sidechain shape is Kickstart 2's quick chain sampled at 0.25 ms from a render, the limiter is a lookahead model fitted to Pro-L 2 renders (about 1 dB rms envelope error), and loop and preview sync was verified by cross-correlation to within 8 ms.
+- **Feel**: rigid keycaps that only travel on their axis, loose knobs with a little inertia, a custom cursor, a touch strip, and a live oscilloscope on the PLAY screen.
+- **Shipping**: one script and one stylesheet, framework-agnostic on purpose. The same bundle embeds in Webflow, Framer or a React host with three tags, and assets are versioned so the CDN never serves a stale render.
+
 ## How it is built
 
 | File | Role |

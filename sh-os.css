@@ -115,6 +115,7 @@
 .shos-tools div{display:flex;flex-direction:column;gap:.6cqw;border-left:.4cqw solid #45A8F0;padding-left:1.6cqw;}
 .shos-tools b{font-size:3.6cqw;font-weight:500;letter-spacing:.02em;line-height:1.05;color:#F0E8D2;}
 .shos-tools span{font-size:1.7cqw;font-weight:400;letter-spacing:.08em;color:#9A9AA3;text-transform:uppercase;line-height:1.1;}
+.shos-stackscr .shos-hf{font-size:1.9cqw;}
 /* GITHUB screen: the repo path reads as the object */
 .shos-gitscr .shos-hb p.shos-git-url{color:#F0E8D2;font-size:3.4cqw;font-weight:500;letter-spacing:.02em;margin-bottom:2.2%;}
 

@@ -33,16 +33,16 @@
     mail: '<rect x="5" y="9" width="30" height="22" rx="3"/><path d="M6 11l14 11 14-11"/>',
     pay:  '<circle cx="20" cy="20" r="14"/><text x="20" y="26" font-size="16" font-weight="500" fill="#F0E8D2" stroke="none" text-anchor="middle">$</text>'
   };
-  // the four stack keys (DESIGN · AI · BUILD · SHIP): what Spence uses, one screen each — edit here
+  // the four stack keys (DESIGN · AI · BUILD · SHIP): one screen each, only tools Spence has shipped with — edit here
   var STACK = [
-    { key: 'design', label: 'DESIGN', tag: 'WHAT I DESIGN WITH', foot: 'RESEARCH → INTERFACE → SYSTEM → CODE',
-      tools: [['Figma', 'interface · design systems'], ['Framer', 'spencehoellen.com'], ['Webflow', 'client sites'], ['Illustrator', 'brand · packaging'], ['Photoshop', 'image'], ['After Effects', 'motion']] },
-    { key: 'ai', label: 'AI', tag: 'HOW I WORK WITH MODELS', foot: 'SH-OS WAS BUILT THIS WAY',
-      tools: [['Claude Code', 'pair builder'], ['Claude', 'thinking partner'], ['Figma MCP', 'design to code'], ['Ableton MCP', 'sound design'], ['Webflow MCP', 'publishing'], ['Notion MCP', 'notes · plans']] },
-    { key: 'build', label: 'BUILD', tag: 'WHAT I BUILD WITH', foot: 'MINIMAL · HIGH CLARITY · SHIPPED',
-      tools: [['React', 'apps'], ['TypeScript', 'types'], ['HTML + CSS', 'the web'], ['Web Audio', 'this synth'], ['Node', 'APIs'], ['Ableton Live', 'the sounds here']] },
+    { key: 'design', label: 'DESIGN', tag: 'WHAT I DESIGN WITH', foot: 'TRUSTWORTHY · FAST · PRECISE',
+      tools: [['Figma', 'systems · tokens · specs'], ['Design systems', 'CFDS: 58 DTCG tokens'], ['Type & spacing', 'hierarchy for dense data'], ['Framer', 'prototypes · this site'], ['Illustrator', 'brand · packaging'], ['After Effects', 'motion studies']] },
+    { key: 'ai', label: 'AI', tag: 'HOW I WORK WITH MODELS', foot: 'PAIR, NOT AUTOPILOT',
+      tools: [['Claude Code', 'pair builder'], ['Claude', 'research · review'], ['Figma MCP', 'design to code'], ['Webflow MCP', 'publishing'], ['Ableton MCP', 'the sounds here'], ['Playwright', 'model-driven checks']] },
+    { key: 'build', label: 'BUILD', tag: 'WHAT I BUILD WITH', foot: 'WIREFRAME → PRODUCTION',
+      tools: [['React', 'features end to end'], ['TypeScript', 'types as the contract'], ['Next.js', 'apps · sites'], ['Tailwind CSS', 'utility styling'], ['GSAP', 'motion systems'], ['Web Audio', 'this synth']] },
     { key: 'ship', label: 'SHIP', tag: 'WHERE IT GOES LIVE', foot: 'DESIGN → CODE → PRODUCTION',
-      tools: [['Vercel', 'hosting · APIs'], ['GitHub', 'source'], ['Framer', 'spencehoellen.com'], ['Webflow', 'client sites'], ['Shopify', 'storefronts']] }
+      tools: [['Vercel', 'hosting · APIs · previews'], ['GitHub', 'source · reviews'], ['Framer', 'spencehoellen.com'], ['Webflow', 'client sites'], ['Shopify', 'storefronts']] }
   ];
   var GITHUB = { url: 'https://github.com/spence52602/sh-os', path: 'github.com/spence52602/sh-os' };
   // WHY? screen copy (Spence's brief, tightened; no em dashes)
