@@ -19,7 +19,7 @@
   .shos-hdr-r{justify-content:flex-end;}
   .shos-name{width:267px;}
   .shos-os{margin-right:166px;}
-  .shos-logo-bg{width:36px;height:22px;background:url(assets/logo-sh.svg) center/contain no-repeat;}
+  .shos-logo-bg{width:36px;height:22px;background:url(assets/logo-sh@4x.png) center/contain no-repeat;}   /* a 4x raster: Safari blurs the filtered SVG */
   .shos-main{flex:1;display:flex;align-items:center;padding:96px 67px 64px;}
   .shos-ftr{display:flex;justify-content:center;padding:0 0 42px;}
   .shos-clock-bg{width:24px;height:24px;background:url(assets/icon-clock.svg) center/contain no-repeat;}
@@ -31,7 +31,7 @@
   }
   @media (max-width:760px){
     .shos-title,.shos-os{display:none;} .shos-name{margin-right:0;white-space:nowrap;}
-    .shos-page{min-height:auto;} .shos-main{flex:0 0 auto;padding:28px 12px 8px;} .shos-ftr{padding:6px 0 28px;}   /* the device sits near the top, the clock right under it */
+    .shos-main{flex:0 0 auto;margin-top:auto;padding:0 12px;} .shos-ftr{margin-bottom:auto;padding:18px 0 0;}   /* device + clock centred as one group, the clock hugging the device */
   }
   @media (max-width:560px){ .shos-hdr{padding:20px 16px 0;font-size:10px;letter-spacing:.05em;} .shos-ver{white-space:nowrap;} }
 </style>
