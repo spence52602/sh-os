@@ -553,7 +553,10 @@
     });
   }
 
+  // phones and small tablets: under 760 px, or a coarse pointer under 1024 px
+  var isMobile = function () { return false; };
   function init(root) {
+    isMobile = function () { return root.clientWidth < 760 || (window.matchMedia && matchMedia('(pointer: coarse)').matches && root.clientWidth < 1024); };
     if (root.__shos) return;
     root.__shos = true;
     var base = root.getAttribute('data-assets') || './assets/';
@@ -585,9 +588,6 @@
     glow.addEventListener('error', function () { glow.remove(); });
     stage.appendChild(glow);
     night.darkImgs.push({ img: glow, src: glowSrc, mode: 2 });
-    var ghost = document.createElement('div'); ghost.className = 'shos-screen-ghost';
-    place(ghost, SCREEN_RECT[0], SCREEN_RECT[1], SCREEN_RECT[2], SCREEN_RECT[3]);
-    stage.appendChild(ghost);
 
     // ---- screen
     var screen = document.createElement('div'); screen.className = 'shos-screen';
@@ -632,6 +632,12 @@
       '<div class="shos-hb"><p>THIS IS BETA V1.0</p><p>MORE FEATURES SHIPPING SOON</p></div>' +
       '<div class="shos-hf"><b>BETA</b><span>◁ ▷ BROWSE · ESC = BACK</span></div>');
     var betaSlot = screen.querySelector('.shos-beta-slot');
+    // phones and small screens: the device is there to look at; every tap answers "desktop only for now"
+    htmlScreen('mobile', 'shos-mobilescr',
+      '<div class="shos-hc"><span>SH-OS · MOBILE</span><span>BETA V1.0</span></div>' +
+      '<div class="shos-hh">DESKTOP ONLY FOR NOW</div>' +
+      '<div class="shos-hb"><p>ONLY AVAILABLE ON DESKTOP FOR NOW.</p><p>OPEN IT ON A LAPTOP TO PLAY.</p></div>' +
+      '<div class="shos-hf"><b>SOON</b><span>MOBILE IS ON THE LIST</span></div>');
     // GITHUB: the source; press the key again to open it
     htmlScreen('github', 'shos-gitscr',
       '<div class="shos-hc"><span>GITHUB · SOURCE</span><span>PRESS AGAIN → OPEN</span></div>' +
@@ -1073,15 +1079,24 @@
       }).catch(function () {});
     });
 
-    function layout() {
-      var stacked = root.clientWidth < 760;
-      root.classList.toggle('is-stacked', stacked);
-      if (stacked && screen.parentNode !== root) root.insertBefore(screen, stage);
-      else if (!stacked && screen.parentNode !== stage) { stage.appendChild(screen); }
+    function layout() {                                                 // the device scales as one piece at every width
+      root.classList.toggle('is-mobile', isMobile());
       scaleCursor(Math.max(0.6, Math.min(1, root.clientWidth / IMG_W)));
     }
     layout();
     window.addEventListener('resize', layout);
+    // on a phone the device screen is a few dozen pixels wide, so the notice also appears as a readable overlay on the device
+    var notice = document.createElement('div'); notice.className = 'shos-notice'; notice.textContent = 'Only available on desktop for now';
+    root.appendChild(notice);
+    var noticeTimer = null;
+    function mobileBlock(ev) {
+      if (!isMobile()) return;
+      ev.preventDefault(); ev.stopPropagation();
+      if (ev.type !== 'pointerdown') return;
+      if (state.current !== 'mobile') { state.lastAction = null; show('mobile'); } else pulse();
+      notice.classList.add('is-on'); clearTimeout(noticeTimer); noticeTimer = setTimeout(function () { notice.classList.remove('is-on'); }, 2400);
+    }
+    ['pointerdown', 'pointerup', 'click'].forEach(function (t) { stage.addEventListener(t, mobileBlock, true); });   // capture: before any key
 
     var mode = 0; try { var m = localStorage.getItem('shos-mode'); mode = m !== null ? +m : (localStorage.getItem('shos-night') === '1' ? 1 : 0); } catch (e) {}
     var forced = /[?&](?:night|mode)=([0-2])/.exec(location.search);   // ?night=1 / ?mode=2 for previews and checks
