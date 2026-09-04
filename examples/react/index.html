@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- React example: the instrument mounted through react/ShOs.tsx. React is loaded from esm.sh via the import map;
+     app.js is built from app.tsx by `npm run build`. Serve the repo (npm start) and open /examples/react/. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SH-OS in React</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100;400;500&display=swap">
+<link rel="stylesheet" href="../../sh-os.css">
+<style>
+  html, body { margin: 0; background: #fff; color: #111; font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .ex-bar { display: flex; gap: 20px; align-items: center; padding: 20px 28px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+  .ex-bar button, .ex-bar select { font: inherit; text-transform: inherit; letter-spacing: inherit; }
+  main { padding: 24px 28px 48px; }
+  body.shos-is-night { color: #fff; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "react": "https://esm.sh/react@18.3.1",
+  "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+  "react-dom": "https://esm.sh/react-dom@18.3.1",
+  "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+} }
+</script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

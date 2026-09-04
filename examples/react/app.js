@@ -1,0 +1,2156 @@
+// examples/react/app.tsx
+import { useState } from "react";
+import { createRoot } from "react-dom/client";
+
+// react/ShOs.tsx
+import { useEffect, useRef } from "react";
+
+// src/geometry.ts
+var IMG_W = 1594;
+var IMG_H = 565.11;
+var OX = 26.91;
+var OY = 27.48;
+var KEY = 81.88;
+var SCREEN_RECT = [365.29, 27.48, 335.52, 166.61];
+var CAP = 0.74;
+var ENC_CAP = 36;
+var SC_KNOB = [205, 36.5, 68, 68];
+var FADER = { top: 193.5, bottom: 278.3, hit: [1492, 178, 54, 118] };
+var ENCODERS = [[739.74, 63.55, "red"], [908.65, 63.55, "orange"], [1078.13, 63.55, "cream"], [1247.03, 63.55, "blue"]];
+var KNOBS = ENCODERS.map((e) => ({ x: e[0], y: e[1], size: 95.04, cap: ENC_CAP, name: e[2] })).concat([{ x: SC_KNOB[0], y: SC_KNOB[1], size: SC_KNOB[2], cap: 40, name: "sidechain" }]);
+var ROW2_X = [2.29, 87.03, 171.19, 255.93, 340.67, 425.41, 509.58, 594.31, 679.05, 763.79, 847.96, 932.7, 1017.43, 1102.17, 1186.34, 1271.08, 1355.82];
+var ROW2 = ["stack:design", "stack:ai", "stack:build", "stack:ship", "beta:1", "beta:2", "beta:3", "beta:4", "prev", "next", "sound", "loop:kick", "loop:clap", "loop:hat", "loop:top", "metro", "stopall"];
+var ROW2_LABELS = ["Design", "AI", "Build", "Ship", "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Previous", "Next", "Sound", "Kick loop", "Clap loop", "Hat loop", "Top loop", "Metronome", "Stop loops"];
+var RAIL = [
+  [2.29, 255.93, "about", "About"],
+  [87.03, 255.93, "mix", "Resume"],
+  [171.19, 255.93, "rec", "Contact"],
+  [2.29, 341.24, "link:x", "X"],
+  [87.03, 341.24, "link:linkedin", "LinkedIn"],
+  [171.19, 341.24, "link:instagram", "Instagram"],
+  [2.29, 425.98, "link:email", "Email"],
+  [87.03, 425.98, "rec", "Phone"],
+  [171.19, 425.98, "link:pay", "Pay"]
+];
+var COMMAND_KEYS = [
+  ...ROW2_X.map((x, i) => ({ x, y: 171.19, w: KEY, h: KEY, action: ROW2[i], label: ROW2_LABELS[i] })),
+  ...RAIL.map((k2) => ({ x: k2[0], y: k2[1], w: KEY, h: KEY, action: k2[2], label: k2[3] })),
+  { x: 171.19, y: 87.03, w: KEY, h: KEY, action: "why", label: "Why?" },
+  // the backstory screen (toggle)
+  { x: 255.93, y: 87.03, w: KEY, h: KEY, action: "github", label: "GitHub" },
+  // the source, press twice to open
+  { x: 267.95, y: 14.89, w: 57.26, h: 57.26, action: "mute", label: "Mute" },
+  { x: 1355.82, y: 2.29, w: KEY, h: KEY, action: "help", label: "Help" },
+  { x: 1355.82, y: 87.03, w: KEY, h: KEY, action: "preview", label: "Preview" }
+  // Spence's 4-bar phrase for the current sound
+];
+var NOTE_NAMES = ["F3", "F#3", "G3", "G#3", "A3", "A#3", "B3", "C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4", "C5", "C#5", "D5", "D#5", "E5"];
+var PILLS = [255.93, 340.1, 424.84, 509.58, 594.31, 679.63, 763.79, 847.96, 932.7, 1017.43, 1101.6, 1186.34, 1271.08, 1355.82].map((x) => ({ x, y: 340.67, w: KEY, h: 167.19, cx: x + KEY / 2, pill: true }));
+var SHARPS = [[255.93, 51.53], [382.47, 12.02], [467.21, 13.17], [594.31, 53.25], [721.42, 15.46], [847.96, 53.25], [974.49, 12.6], [1059.23, 13.74], [1186.34, 52.68], [1313.45, 14.89]].map((s) => {
+  const x = s[0] + s[1];
+  return { x, y: 255.93 + 12.6, w: 57.26, h: 57.26, cx: x + 28.63, pill: false };
+});
+var PIANO = [...PILLS, ...SHARPS].sort((a, b) => a.cx - b.cx).map((k2, i) => ({ ...k2, note: i, name: NOTE_NAMES[i] }));
+var QWERTY = ["z", "s", "x", "d", "c", "g", "v", "b", "h", "n", "j", "m", "q", "2", "w", "3", "e", "5", "r", "t", "6", "y", "7", "u"];
+var g4 = (x1, y1, x2, y2, title, note, side) => ({ x1: OX + x1, y1: OY + y1, x2: OX + x2, y2: OY + y2, title, note, side });
+var GUIDE = [
+  g4(2.29, 171.19, 337.81, 253.07, "STACK", "Design · AI · Build · Ship — the tools behind the work"),
+  g4(340.67, 171.19, 676.19, 253.07, "SLOTS 1–4", "Empty in Beta v1.0 — more features shipping soon"),
+  g4(679.05, 171.19, 845.67, 253.07, "◁ ▷", "Step through screens"),
+  g4(847.96, 171.19, 1437.7, 253.07, "JAM", "Sound · kick · clap · hat · top (press to step 1 · 2 · 3 · off) · metronome · stop"),
+  g4(171.19, 12.6, 337.81, 168.91, "SIDECHAIN · MUTE · WHY? · GITHUB", "Duck the synth to the beat (turn) · silence · the backstory · the source (press twice to open)"),
+  g4(2.29, 255.93, 253.07, 507.86, "PAGES + SOCIALS", "About · résumé · contact · X · in · IG · mail · phone · pay — press twice to open"),
+  g4(255.93, 255.93, 1437.7, 507.86, "KEYBOARD", "Play it · drag for glissando · Z–M / Q–U on QWERTY"),
+  { x1: 739.74, y1: 63.55, x2: 1342.07, y2: 158.59, title: "KNOBS", note: "Reverb · cutoff · BPM · volume — scroll or drag to turn" },
+  g4(1355.82, 2.29, 1437.7, 168.91, "HELP · PREVIEW", "This guide · hear the current sound (knobs work while it plays)", "right"),
+  { x1: 1490, y1: 178, x2: 1548, y2: 300, title: "FLUTTER", note: "Drag up for stutter · tap to switch 1/8 · 1/16 · 1/4", side: "right" }
+];
+var pct = (v, of) => (v / of * 100).toFixed(3) + "%";
+function place(el2, x, y, w, h) {
+  el2.style.left = pct(x, IMG_W);
+  el2.style.top = pct(y, IMG_H);
+  el2.style.width = pct(w, IMG_W);
+  el2.style.height = pct(h, IMG_H);
+}
+var pad2 = (n) => (n < 10 ? "0" : "") + n;
+
+// src/content.ts
+var SITE = "https://spencehoellen.com";
+var LINKS = {
+  x: { label: "X — SOCIAL", handle: "@SPENCEHOELLEN", domain: "X.COM", url: "https://x.com/SpenceHoellen", icon: "x", rail: "X" },
+  linkedin: { label: "LINKEDIN — SOCIAL", handle: "SPENCE-HOELLEN", domain: "LINKEDIN.COM", url: "https://www.linkedin.com/in/spence-hoellen/", icon: "in", rail: "LINKEDIN" },
+  instagram: { label: "INSTAGRAM — SOCIAL", handle: "@SPENCEHOELLEN", domain: "INSTAGRAM.COM", url: "https://www.instagram.com/spencehoellen/", icon: "ig", rail: "INSTAGRAM" },
+  email: { label: "EMAIL — DIRECT", handle: "SPENCE52602", domain: "GMAIL.COM", url: "mailto:spence52602@gmail.com", icon: "mail", rail: "EMAIL" },
+  pay: { label: "PAY — CLIENT PORTAL", handle: "PORTAL", domain: "SPENCEHOELLEN.COM", url: SITE + "/pay", icon: "pay", rail: "PAY" }
+};
+var RAIL_ORDER = ["x", "linkedin", "instagram", "email", "pay"];
+var ICONS = {
+  x: '<path d="M11 11L29 29M29 11L11 29"/>',
+  in: '<rect x="4.5" y="4.5" width="31" height="31" rx="6"/><text x="20" y="27" font-size="17" font-weight="500" fill="#F0E8D2" stroke="none" text-anchor="middle">in</text>',
+  ig: '<rect x="5" y="5" width="30" height="30" rx="8"/><circle cx="20" cy="20" r="7"/><circle cx="29" cy="11" r="1.8" fill="#F0E8D2" stroke="none"/>',
+  mail: '<rect x="5" y="9" width="30" height="22" rx="3"/><path d="M6 11l14 11 14-11"/>',
+  pay: '<circle cx="20" cy="20" r="14"/><text x="20" y="26" font-size="16" font-weight="500" fill="#F0E8D2" stroke="none" text-anchor="middle">$</text>'
+};
+var STACK = [
+  {
+    key: "design",
+    label: "DESIGN",
+    tag: "WHAT I DESIGN WITH",
+    foot: "TRUSTWORTHY · FAST · PRECISE",
+    tools: [["Figma", "systems · tokens · specs"], ["Design systems", "CFDS: 58 DTCG tokens"], ["Type & spacing", "hierarchy for dense data"], ["Framer", "prototypes · this site"], ["Illustrator", "brand · packaging"], ["After Effects", "motion studies"]]
+  },
+  {
+    key: "ai",
+    label: "AI",
+    tag: "HOW I WORK WITH MODELS",
+    foot: "PAIR, NOT AUTOPILOT",
+    tools: [["Claude Code", "pair builder"], ["Claude", "research · review"], ["Figma MCP", "design to code"], ["Webflow MCP", "publishing"], ["Ableton MCP", "the sounds here"], ["Playwright", "model-driven checks"]]
+  },
+  {
+    key: "build",
+    label: "BUILD",
+    tag: "WHAT I BUILD WITH",
+    foot: "WIREFRAME → PRODUCTION",
+    tools: [["React", "features end to end"], ["TypeScript", "types as the contract"], ["Next.js", "apps · sites"], ["Tailwind CSS", "utility styling"], ["GSAP", "motion systems"], ["Web Audio", "this synth"]]
+  },
+  {
+    key: "ship",
+    label: "SHIP",
+    tag: "WHERE IT GOES LIVE",
+    foot: "DESIGN → CODE → PRODUCTION",
+    tools: [["Vercel", "hosting · APIs · previews"], ["GitHub", "source · reviews"], ["Framer", "spencehoellen.com"], ["Webflow", "client sites"], ["Shopify", "storefronts"]]
+  }
+];
+var GITHUB = { url: "https://github.com/spence52602/sh-os", path: "github.com/spence52602/sh-os" };
+var WHY_COPY = "Before design, Spence Hoellen made records. As a DJ and producer he passed a million streams and signed with Warner Bros. at nineteen. The run was short and it was a blast. It also built the instincts he still works from: taste, timing, and shipping work people can feel. SH-OS is a small tribute to that era.";
+var URLS = { about: SITE + "/about", github: GITHUB.url, mix: "https://payments-api-spencehoellen.vercel.app/Spence_Hoellen_Resume.pdf", rec: SITE + "/contact" };
+var SCREENS = ["boot", "idle", "play", "rec", "mix", "about", "link"];
+var FILES = { boot: "01-boot.svg", idle: "02-idle.svg", play: "06-play.svg", rec: "07-rec.svg", mix: "08-mix.svg", about: "09-about.svg", link: "10-link.svg" };
+var BROWSE = ["stack:design", "stack:ai", "stack:build", "stack:ship", "play", "rec", "mix", "about", "github", "link"];
+var KNOB_LABEL = { reverb: "REVERB", cutoff: "CUTOFF · MG LOW 24", bpm: "BPM", volume: "VOLUME", sidechain: "SIDECHAIN · KICKSTART" };
+
+// src/audio/sidechain.ts
+var SC_CURVE = new Float32Array([0.163, 0.072, 0.056, 0.041, 0.028, 0.017, 0.015, 0.032, 0.063, 0.101, 0.142, 0.184, 0.228, 0.271, 0.315, 0.358, 0.401, 0.442, 0.484, 0.523, 0.563, 0.6, 0.638, 0.672, 0.706, 0.738, 0.769, 0.797, 0.824, 0.848, 0.871, 0.891, 0.909, 0.925, 0.939, 0.952, 0.962, 0.972, 0.98, 0.986, 0.991, 0.995, 0.998, 0.999, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+var SC_ATTACK = new Float32Array([1, 0.941, 0.865, 0.782, 0.692, 0.597, 0.498, 0.398, 0.3, 0.211, 0.157, 0.121, 0.101, 0.087, 0.082]);
+var SC_REF_BEAT_MS = 6e4 / 132;
+function buildShape(n = 2048) {
+  const out = new Float32Array(n), kt = [], kv = [], M = SC_CURVE.length;
+  for (let a = 0; a < SC_ATTACK.length; a++) {
+    kt.push(a * 0.25);
+    kv.push(SC_ATTACK[a]);
+  }
+  for (let j = 1; j < M; j++) {
+    kt.push((j + 0.5) / M * SC_REF_BEAT_MS);
+    kv.push(SC_CURVE[j]);
+  }
+  kt.push(SC_REF_BEAT_MS);
+  kv.push(1);
+  for (let i = 0, k2 = 0; i < n; i++) {
+    const t = i / (n - 1) * SC_REF_BEAT_MS;
+    while (k2 < kt.length - 2 && t > kt[k2 + 1]) k2++;
+    const f = Math.max(0, Math.min(1, (t - kt[k2]) / (kt[k2 + 1] - kt[k2])));
+    out[i] = kv[k2] * (1 - f) + kv[k2 + 1] * f;
+  }
+  out[0] = 1;
+  out[n - 1] = 1;
+  return out;
+}
+function scCurve(shape, mix) {
+  const out = new Float32Array(shape.length);
+  for (let i = 0; i < out.length; i++) out[i] = 1 - mix * (1 - shape[i]);
+  return out;
+}
+
+// src/audio/flutter.ts
+var FLUTTER_DIVS = [8, 16, 4];
+var RISE = 0.04;
+var FLOOR = 0;
+var LIFT = 0.05;
+function buildFlutter(n = 1024) {
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const p = i / n;
+    if (p < RISE) {
+      const k2 = p / RISE;
+      out[i] = LIFT + (1 - LIFT) * (0.5 - 0.5 * Math.cos(Math.PI * k2));
+      continue;
+    }
+    const q = (p - RISE) / (1 - RISE);
+    const fall = Math.pow(1 - q, 2) * (1 - FLOOR) + FLOOR;
+    const lift = q < 0.85 ? 0 : LIFT * (0.5 - 0.5 * Math.cos(Math.PI * (q - 0.85) / 0.15));
+    out[i] = fall + lift * (1 - fall);
+  }
+  return out;
+}
+function flutterCurve(shape, amount) {
+  const out = new Float32Array(shape.length);
+  for (let i = 0; i < out.length; i++) out[i] = 1 - amount * (1 - shape[i]);
+  return out;
+}
+var flutterPeriod = (div, bpm) => 60 / bpm * 4 / div;
+
+// src/audio/tuning.ts
+var cutoffHz = (v) => 40 * Math.pow(500, v);
+var FILTER_Q = [0.54, 2.2];
+var PITCH = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+var noteName = (midi) => PITCH[midi % 12] + (Math.floor(midi / 12) - 1);
+var SOUNDS = {
+  pad: { dir: "pad", label: "PAD", root: 53, gain: 0.75 },
+  // key 0 = F3 (MIDI 53) … key 23 = E5
+  lead: { dir: "lead", label: "LEAD", root: 53, gain: 1 },
+  bass: { dir: "bass", label: "BASS", root: 47, gain: 0.55 }
+  // keyed from B2: the bass sits best B to A#
+};
+var SOUND_ORDER = ["pad", "lead", "bass"];
+var LOOPS = { kick: ["kick-1", "kick-2", "kick-3"], clap: ["clap-1", "clap-2", "clap-3"], hat: ["hat-1", "hat-2", "hat-3"], top: ["top-1", "top-2", "top-3"] };
+var LOOP_ORDER = ["kick", "clap", "hat", "top"];
+var LOOP_LABEL = { kick: "KICK", clap: "CLAP", hat: "HAT", top: "TOP" };
+var LOOP_BPM = 132;
+var NOTE_LOOP = [0.9, 1.55];
+var PREVIEW_BEATS = 16;
+var PREVIEW_BPM = { pad: 132, lead: 132, bass: 132 };
+var DEFAULT_PARAMS = { reverb: 0, cutoff: 1, bpm: 132, volume: 0.8, sidechain: 0, flutter: 0, flutterDiv: 8 };
+var MASTER = 0.9;
+var BPM_MIN = 60;
+var BPM_MAX = 180;
+
+// src/audio/engine.ts
+var Engine = class {
+  constructor(opts) {
+    this.params = { ...DEFAULT_PARAMS };
+    this.sound = "pad";
+    this.muted = false;
+    this.ac = null;
+    this.master = null;
+    this.synthBus = null;
+    this.scGain = null;
+    this.filter = null;
+    this.filter2 = null;
+    this.wetGain = null;
+    this.convolver = null;
+    this.loopBus = null;
+    this.clickBus = null;
+    /** The FLUTTER gate: the whole mix passes through it on the way to the limiter. */
+    this.flutterGain = null;
+    /** Analysers feeding the PLAY screen oscilloscope: the synth chain and the whole mix. */
+    this.scopeSynth = null;
+    this.scopeMix = null;
+    this.buffers = {};
+    this.voices = {};
+    this.clock = { start: null, lastLaunch: null };
+    this.loopState = {};
+    this.metro = { on: false, timer: 0, next: 0 };
+    this.preview = { src: null, g: null, name: null };
+    /** Runtime defaults are a transparent safety limiter (the mix must never fly over 0 dB): 1.5 ms lookahead, 60 ms
+     *  release, peaks held at −0.18 dBFS with a brickwall at −0.04 dBFS behind it. The Pro-L 2 "push" fit
+     *  (0.25 ms / 8 ms / gain-computer ceiling 1.343) returns with the PUSH strip once that ships. */
+    this.lim = { node: null, ready: false, lookMs: 1.5, relMs: 60, limCeiling: 0.98, ceiling: 0.995, soft: 0 };
+    this.loading = {};
+    this.heldKeys = {};
+    this.sc = { timer: 0, next: 0, shape: buildShape() };
+    this.fl = { timer: 0, next: 0, shape: buildFlutter() };
+    this.lastClick = -1;
+    this.levelBuf = null;
+    this.preloadTimer = 0;
+    this.metroPump = () => {
+      const c = this.ac;
+      if (!c || !this.metro.on) return;
+      while (this.metro.next < c.currentTime + 0.12) {
+        const n = Math.round((this.metro.next - (this.clock.start || 0)) / this.beatLen());
+        if (this.metro.next >= c.currentTime - 0.01) this.metroTick(c, this.metro.next, n % 4 === 0);
+        this.metro.next += this.beatLen();
+      }
+    };
+    // ---- sidechain scheduling
+    this.scPump = () => {
+      const c = this.ac;
+      if (!c || !this.scGain || this.params.sidechain <= 0) return;
+      while (this.sc.next < c.currentTime + 0.15) {
+        if (this.sc.next >= c.currentTime) {
+          try {
+            this.scGain.gain.setValueCurveAtTime(scCurve(this.sc.shape, this.params.sidechain), this.sc.next, this.beatLen() * 0.995);
+          } catch {
+          }
+        }
+        this.sc.next += this.beatLen();
+      }
+    };
+    // ---- flutter scheduling: the same beat-locked curve idea as the sidechain, one curve per division
+    this.flPump = () => {
+      const c = this.ac;
+      if (!c || !this.flutterGain || this.params.flutter <= 0) return;
+      const period = flutterPeriod(this.params.flutterDiv, this.params.bpm);
+      while (this.fl.next < c.currentTime + 0.15) {
+        if (this.fl.next >= c.currentTime) {
+          try {
+            this.flutterGain.gain.setValueCurveAtTime(flutterCurve(this.fl.shape, this.params.flutter), this.fl.next, period * 0.995);
+          } catch {
+          }
+        }
+        this.fl.next += period;
+      }
+    };
+    this.assetBase = opts.assetBase;
+    this.vq = "?v=" + opts.version;
+  }
+  /** The AudioContext and graph, created on first use (a page can only start audio after a gesture; see unlock). */
+  ctx() {
+    if (this.ac) return this.ac;
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    const ac = this.ac = new C();
+    const master = this.master = ac.createGain();
+    master.gain.value = this.masterTarget();
+    const flutterGain = this.flutterGain = ac.createGain();
+    flutterGain.gain.value = 1;
+    master.connect(flutterGain);
+    flutterGain.connect(ac.destination);
+    this.initLimiter(ac);
+    const synthBus = this.synthBus = ac.createGain();
+    const scGain = this.scGain = ac.createGain();
+    scGain.gain.value = 1;
+    const filter = this.filter = ac.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.Q.value = FILTER_Q[0];
+    filter.frequency.value = cutoffHz(this.params.cutoff);
+    const filter2 = this.filter2 = ac.createBiquadFilter();
+    filter2.type = "lowpass";
+    filter2.Q.value = FILTER_Q[1];
+    filter2.frequency.value = cutoffHz(this.params.cutoff);
+    synthBus.connect(filter);
+    filter.connect(filter2);
+    filter2.connect(scGain);
+    const convolver = this.convolver = ac.createConvolver();
+    const wetGain = this.wetGain = ac.createGain();
+    wetGain.gain.value = this.params.reverb;
+    filter2.connect(wetGain);
+    wetGain.connect(convolver);
+    convolver.connect(scGain);
+    scGain.connect(master);
+    const scopeSynth = this.scopeSynth = ac.createAnalyser();
+    scopeSynth.fftSize = 2048;
+    scopeSynth.smoothingTimeConstant = 0;
+    scGain.connect(scopeSynth);
+    const scopeMix = this.scopeMix = ac.createAnalyser();
+    scopeMix.fftSize = 2048;
+    scopeMix.smoothingTimeConstant = 0;
+    flutterGain.connect(scopeMix);
+    this.loopBus = ac.createGain();
+    this.loopBus.connect(master);
+    this.clickBus = ac.createGain();
+    this.clickBus.connect(master);
+    return ac;
+  }
+  /** Resume a context the browser parked before the first gesture. */
+  unlock() {
+    const c = this.ctx();
+    if (c && c.state === "suspended") void c.resume();
+  }
+  ctxState() {
+    return this.ac ? this.ac.state : "none";
+  }
+  // ---- limiter (AudioWorklet after the flutter gate)
+  initLimiter(c) {
+    if (!c.audioWorklet || this.lim.ready) return;
+    const url = this.assetBase.replace(/assets\/$/, "") + "sh-os-limiter.js" + this.vq;
+    c.audioWorklet.addModule(url).then(() => {
+      const tail = this.flutterGain;
+      if (this.ac !== c || !tail) return;
+      const node = new AudioWorkletNode(c, "shos-limiter", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+      const l = this.lim;
+      node.port.postMessage({ lookMs: l.lookMs, relMs: l.relMs, limCeiling: l.limCeiling, ceiling: l.ceiling, soft: l.soft, drive: 1 });
+      tail.disconnect(c.destination);
+      tail.connect(node);
+      node.connect(c.destination);
+      l.node = node;
+      l.ready = true;
+    }).catch(() => {
+      this.lim.ready = false;
+    });
+  }
+  // ---- master
+  masterTarget() {
+    return this.muted ? 0 : MASTER * this.params.volume;
+  }
+  setMuted(on) {
+    this.muted = !!on;
+    const c = this.ctx();
+    if (!c || !this.master) return;
+    this.master.gain.cancelScheduledValues(c.currentTime);
+    this.master.gain.setTargetAtTime(this.masterTarget(), c.currentTime, 0.015);
+  }
+  // ---- samples
+  /** Previews loop at exactly 16 beats but the bounces end mid-waveform, so the wrap back to bar 1 clicked: a 4 ms
+   *  raised-cosine fade into the loop point (the drum loops already end on zero). */
+  condition(name, b) {
+    if (name.indexOf("preview/") !== 0) return b;
+    const end = Math.min(b.length, Math.round(PREVIEW_BEATS * 60 / (PREVIEW_BPM[name.slice(8)] || LOOP_BPM) * b.sampleRate));
+    const n = Math.min(end, Math.round(b.sampleRate * 4e-3));
+    for (let ch = 0; ch < b.numberOfChannels; ch++) {
+      const d = b.getChannelData(ch);
+      for (let i = 0; i < n; i++) d[end - n + i] *= 0.5 * (1 + Math.cos(Math.PI * i / (n - 1)));
+    }
+    return b;
+  }
+  /** Fetch and decode `audio/<name>.wav` once; the promise is shared while it loads. */
+  load(name) {
+    if (this.buffers[name]) return Promise.resolve(this.buffers[name]);
+    const pending = this.loading[name];
+    if (pending) return pending;
+    const c = this.ctx();
+    if (!c) return Promise.reject(new Error("no audio"));
+    this.loading[name] = fetch(this.assetBase + "audio/" + name + ".wav" + this.vq).then((r) => r.arrayBuffer()).then((ab) => c.decodeAudioData(ab)).then((b) => {
+      this.buffers[name] = this.condition(name, b);
+      return b;
+    });
+    return this.loading[name];
+  }
+  preloadSound(name) {
+    for (let i = 0; i < 24; i++) this.load(SOUNDS[name].dir + "/note-" + pad2(i)).catch(() => {
+    });
+  }
+  /** Clicks, the current sound and the reverb impulse now; the other sounds after a beat, so SOUND switches are instant. */
+  preload() {
+    if (!this.ctx()) return;
+    ["click-1", "click-2", "click-3"].forEach((n) => this.load(n).catch(() => {
+    }));
+    this.preloadSound(this.sound);
+    this.load("ir/vintageverb").then((b) => {
+      if (this.convolver) this.convolver.buffer = b;
+    }).catch(() => {
+    });
+    clearTimeout(this.preloadTimer);
+    this.preloadTimer = window.setTimeout(() => {
+      SOUND_ORDER.forEach((s) => {
+        if (s !== this.sound) this.preloadSound(s);
+      });
+    }, 1500);
+  }
+  // ---- hover clicks
+  /** True while anything sounds: a loop / preview / metronome running, a note held, or a synth tail still ringing. */
+  audioBusy() {
+    if (this.anyRunning() || Object.keys(this.voices).length) return true;
+    if (!this.scopeSynth) return false;
+    if (!this.levelBuf) this.levelBuf = new Float32Array(this.scopeSynth.fftSize);
+    this.scopeSynth.getFloatTimeDomainData(this.levelBuf);
+    let sum = 0;
+    for (let i = 0; i < this.levelBuf.length; i += 4) sum += this.levelBuf[i] * this.levelBuf[i];
+    return Math.sqrt(sum / (this.levelBuf.length / 4)) > 1e-3;
+  }
+  /** One of the three key clicks, never the same twice in a row; silent while anything plays. */
+  playClick() {
+    const c = this.ctx();
+    if (!c || c.state !== "running" || this.muted || !this.clickBus) return;
+    if (this.audioBusy()) return;
+    let pick;
+    do {
+      pick = 1 + Math.floor(Math.random() * 3);
+    } while (pick === this.lastClick);
+    this.lastClick = pick;
+    const b = this.buffers["click-" + pick];
+    if (!b) return;
+    const src = c.createBufferSource();
+    src.buffer = b;
+    const g = c.createGain();
+    g.gain.value = 0.7;
+    src.connect(g);
+    g.connect(this.clickBus);
+    src.start(0);
+  }
+  // ---- notes
+  noteOn(i) {
+    this.heldKeys[i] = true;
+    const c = this.ctx();
+    if (!c || !this.synthBus) return;
+    this.unlock();
+    const s = SOUNDS[this.sound], b = this.buffers[s.dir + "/note-" + pad2(i)];
+    if (!b) {
+      const want = this.sound;
+      this.preloadSound(this.sound);
+      this.load(s.dir + "/note-" + pad2(i)).then(() => {
+        if (this.sound === want && !this.voices[i] && this.heldKeys[i]) this.noteOn(i);
+      }).catch(() => {
+      });
+      return;
+    }
+    if (this.voices[i]) this.noteOff(i, true);
+    const t = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = b;
+    src.loop = true;
+    src.loopStart = NOTE_LOOP[0];
+    src.loopEnd = NOTE_LOOP[1];
+    const g = c.createGain();
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.linearRampToValueAtTime(s.gain, t + 4e-3);
+    src.connect(g);
+    g.connect(this.synthBus);
+    src.start(t);
+    this.voices[i] = { src, g, t0: t, lvl: s.gain };
+  }
+  noteOff(i, fast = false) {
+    this.heldKeys[i] = false;
+    const v = this.voices[i];
+    if (!v) return;
+    delete this.voices[i];
+    const c = this.ctx();
+    if (!c) return;
+    const rel = fast ? 0.03 : 0.12, t = Math.max(c.currentTime, v.t0 + 6e-3);
+    v.g.gain.cancelScheduledValues(t);
+    v.g.gain.setValueAtTime(v.lvl, t);
+    v.g.gain.linearRampToValueAtTime(1e-4, t + rel);
+    try {
+      v.src.stop(t + rel + 0.02);
+    } catch {
+    }
+  }
+  allNotesOff() {
+    Object.keys(this.voices).forEach((i) => this.noteOff(+i));
+  }
+  activeNotes() {
+    return Object.keys(this.voices);
+  }
+  setSound(name) {
+    this.sound = name;
+    if (this.ac) this.preloadSound(name);
+  }
+  keyNoteName(i) {
+    return noteName(SOUNDS[this.sound].root + i);
+  }
+  // ---- beat clock, loops, metronome
+  beatLen() {
+    return 60 / this.params.bpm;
+  }
+  clockStart(c) {
+    if (this.clock.start === null) this.clock.start = c.currentTime + 0.03;
+    return this.clock.start;
+  }
+  nextBeat(c) {
+    const s = this.clockStart(c), now = c.currentTime + 0.015, n = Math.max(0, Math.ceil((now - s) / this.beatLen()));
+    return s + n * this.beatLen();
+  }
+  /** Launches quantise to the next bar line, like Live's 1-bar global quantisation: everything starts on its own "1". */
+  nextBar(c) {
+    const s = this.clockStart(c), now = c.currentTime + 0.015, bar = 4 * this.beatLen(), n = Math.max(0, Math.ceil((now - s) / bar));
+    return s + n * bar;
+  }
+  anyRunning() {
+    return this.metro.on || !!this.preview.src || LOOP_ORDER.some((f) => !!(this.loopState[f] && this.loopState[f].src));
+  }
+  loopStopSrc(fam) {
+    const l = this.loopState[fam];
+    if (!l || !l.src || !l.g || !this.ac) return;
+    const t = this.ac.currentTime;
+    l.g.gain.cancelScheduledValues(t);
+    l.g.gain.setTargetAtTime(0, t, 0.012);
+    try {
+      l.src.stop(t + 0.1);
+    } catch {
+    }
+    l.src = null;
+  }
+  loopPlay(fam, idx) {
+    const c = this.ctx();
+    if (!c || !this.loopBus) return;
+    this.unlock();
+    const name = LOOPS[fam][idx];
+    this.loopStopSrc(fam);
+    this.loopState[fam] = { idx, src: null, g: null, pending: name };
+    this.load("loops/" + name).then((b) => {
+      const l = this.loopState[fam];
+      if (!l || l.pending !== name || !this.loopBus) return;
+      const src = c.createBufferSource();
+      src.buffer = b;
+      src.loop = true;
+      src.loopStart = 0;
+      src.loopEnd = b.duration;
+      src.playbackRate.value = this.params.bpm / LOOP_BPM;
+      const g = c.createGain();
+      g.gain.value = 0;
+      src.connect(g);
+      g.connect(this.loopBus);
+      const t = this.nextBar(c);
+      src.start(t, 0);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(1, t + 4e-3);
+      l.src = src;
+      l.g = g;
+      l.pending = null;
+      l.at = t;
+      this.clock.lastLaunch = t;
+    }).catch(() => {
+    });
+  }
+  loopStop(fam) {
+    this.loopStopSrc(fam);
+    this.loopState[fam] = null;
+  }
+  loopIndex(fam) {
+    const l = this.loopState[fam];
+    return l ? l.idx : -1;
+  }
+  /** A loop key steps its family 1 → 2 → 3 → off. */
+  loopCycle(fam) {
+    const next = this.loopIndex(fam) + 1;
+    if (next > 2) this.loopStop(fam);
+    else this.loopPlay(fam, next);
+  }
+  loopLive(fam) {
+    const l = this.loopState[fam];
+    return !!(l && l.src);
+  }
+  previewRate() {
+    return this.params.bpm / (PREVIEW_BPM[this.preview.name] || LOOP_BPM);
+  }
+  previewStop() {
+    const p = this.preview;
+    p.name = null;
+    if (!p.src || !p.g || !this.ac) return;
+    const t = this.ac.currentTime;
+    p.g.gain.cancelScheduledValues(t);
+    p.g.gain.setTargetAtTime(0, t, 0.012);
+    try {
+      p.src.stop(t + 0.1);
+    } catch {
+    }
+    p.src = null;
+  }
+  /** The current sound's 4-bar phrase, looped like a drum loop: bar-aligned, following BPM, through the synth chain. */
+  previewPlay() {
+    const c = this.ctx();
+    if (!c || !this.synthBus) return;
+    this.unlock();
+    const name = this.sound;
+    this.previewStop();
+    this.preview.name = name;
+    this.load("preview/" + name).then((b) => {
+      const p = this.preview;
+      if (p.name !== name || p.src || !this.synthBus) return;
+      const src = c.createBufferSource();
+      src.buffer = b;
+      src.loop = true;
+      src.loopStart = 0;
+      src.loopEnd = PREVIEW_BEATS * 60 / (PREVIEW_BPM[name] || LOOP_BPM);
+      src.playbackRate.value = this.params.bpm / (PREVIEW_BPM[name] || LOOP_BPM);
+      const g = c.createGain();
+      g.gain.value = 0;
+      src.connect(g);
+      g.connect(this.synthBus);
+      const t = this.nextBar(c);
+      src.start(t, 0);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(1, t + 4e-3);
+      p.src = src;
+      p.g = g;
+      p.at = t;
+      this.clock.lastLaunch = t;
+    }).catch(() => {
+      this.preview.name = null;
+    });
+  }
+  /** Stop loops, metronome and preview; the sidechain and the flutter keep their own beat. */
+  stopAllLoops() {
+    LOOP_ORDER.forEach((f) => this.loopStop(f));
+    this.setMetro(false);
+    this.previewStop();
+    this.clock.start = null;
+    if (this.params.sidechain > 0) this.scReschedule();
+    if (this.params.flutter > 0) this.flReschedule();
+  }
+  metroTick(c, t, accent) {
+    if (!this.clickBus) return;
+    const o = c.createOscillator();
+    o.type = "sine";
+    o.frequency.value = accent ? 1760 : 1175;
+    const g = c.createGain();
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(accent ? 0.45 : 0.3, t + 15e-4);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + 0.045);
+    o.connect(g);
+    g.connect(this.clickBus);
+    o.start(t);
+    o.stop(t + 0.06);
+  }
+  setMetro(on) {
+    const c = this.ctx();
+    if (!c) return;
+    this.metro.on = !!on;
+    clearInterval(this.metro.timer);
+    this.metro.timer = 0;
+    if (this.metro.on) {
+      this.unlock();
+      this.metro.next = this.nextBeat(c);
+      this.metroPump();
+      this.metro.timer = window.setInterval(this.metroPump, 30);
+    }
+  }
+  /** (Re)start the duck from the next beat: after a BPM change, a mix change, or STOP. */
+  scReschedule() {
+    const c = this.ac;
+    if (!c || !this.scGain) return;
+    clearInterval(this.sc.timer);
+    this.sc.timer = 0;
+    const t = c.currentTime + 5e-3;
+    this.scGain.gain.cancelScheduledValues(t);
+    if (this.params.sidechain <= 0) {
+      this.scGain.gain.setTargetAtTime(1, t, 0.02);
+      return;
+    }
+    this.scGain.gain.setTargetAtTime(1, t, 0.01);
+    this.sc.next = this.nextBeat(c);
+    this.scPump();
+    this.sc.timer = window.setInterval(this.scPump, 40);
+  }
+  /** (Re)start the gate on the next division boundary of the beat clock. */
+  flReschedule() {
+    const c = this.ac;
+    if (!c || !this.flutterGain) return;
+    clearInterval(this.fl.timer);
+    this.fl.timer = 0;
+    const t = c.currentTime + 5e-3;
+    this.flutterGain.gain.cancelScheduledValues(t);
+    if (this.params.flutter <= 0) {
+      this.flutterGain.gain.setTargetAtTime(1, t, 0.02);
+      return;
+    }
+    this.flutterGain.gain.setTargetAtTime(1, t, 0.01);
+    const s = this.clockStart(c), period = flutterPeriod(this.params.flutterDiv, this.params.bpm), now = c.currentTime + 0.015;
+    this.fl.next = s + Math.max(0, Math.ceil((now - s) / period)) * period;
+    this.flPump();
+    this.fl.timer = window.setInterval(this.flPump, 40);
+  }
+  /** Step the division: 1/8 → 1/16 → 1/4 → 1/8. Returns the new one. */
+  cycleFlutterDiv() {
+    const i = FLUTTER_DIVS.indexOf(this.params.flutterDiv);
+    this.params.flutterDiv = FLUTTER_DIVS[(i + 1) % FLUTTER_DIVS.length];
+    if (this.params.flutter > 0) this.flReschedule();
+    return this.params.flutterDiv;
+  }
+  // ---- parameters
+  /** Tempo: the clock and every playback rate change at the same instant, so nothing drifts. */
+  setBpm(v) {
+    v = Math.round(Math.max(BPM_MIN, Math.min(BPM_MAX, v)));
+    const old = this.params.bpm;
+    this.params.bpm = v;
+    const c = this.ac;
+    if (!c) return;
+    const at = c.currentTime + 5e-3;
+    if (this.clock.start !== null) {
+      const beats = (at - this.clock.start) / (60 / old);
+      this.clock.start = at - beats * (60 / v);
+      if (this.metro.on) this.metro.next = this.nextBeat(c);
+    }
+    LOOP_ORDER.forEach((f) => {
+      const l = this.loopState[f];
+      if (l && l.src) l.src.playbackRate.setValueAtTime(v / LOOP_BPM, at);
+    });
+    if (this.preview.src) this.preview.src.playbackRate.setValueAtTime(this.previewRate(), at);
+    if (this.params.sidechain > 0) this.scReschedule();
+    if (this.params.flutter > 0) this.flReschedule();
+  }
+  /** Knob values are 0 to 1 except bpm, which is absolute. */
+  setParam(name, v) {
+    if (name === "bpm") return this.setBpm(v);
+    v = Math.max(0, Math.min(1, v));
+    this.params[name] = v;
+    const c = this.ac;
+    if (!c) return;
+    const t = c.currentTime;
+    if (name === "reverb" && this.wetGain) this.wetGain.gain.setTargetAtTime(v * 0.9, t, 0.02);
+    if (name === "cutoff" && this.filter && this.filter2) {
+      const hz = cutoffHz(v);
+      this.filter.frequency.setTargetAtTime(hz, t, 0.02);
+      this.filter2.frequency.setTargetAtTime(hz, t, 0.02);
+    }
+    if (name === "volume" && this.master) this.master.gain.setTargetAtTime(this.masterTarget(), t, 0.02);
+    if (name === "sidechain") {
+      this.unlock();
+      this.scReschedule();
+    }
+    if (name === "flutter") {
+      this.unlock();
+      this.flReschedule();
+    }
+  }
+  // ---- diagnostics (used by the tests and the debug API)
+  /** 1 ms RMS envelope of a decoded asset (e.g. 'loops/kick-1', 'preview/bass'). */
+  env(name) {
+    const b = this.buffers[name];
+    if (!b) return null;
+    const d = b.getChannelData(0), hop = Math.round(b.sampleRate / 1e3), out = [];
+    for (let i = 0; i + hop <= d.length; i += hop) {
+      let s = 0;
+      for (let j = i; j < i + hop; j++) s += d[j] * d[j];
+      out.push(Math.sqrt(s / hop));
+    }
+    return out;
+  }
+  /** Record the drum bus and the synth bus for `sec` seconds → 1 ms RMS envelopes, used to verify sync. */
+  tap(sec) {
+    const c = this.ctx();
+    if (!c || !this.loopBus || !this.scGain) return Promise.reject(new Error("no audio"));
+    const loopBus = this.loopBus, scGain = this.scGain;
+    return new Promise((resolve) => {
+      const n = Math.ceil(sec * c.sampleRate), L = new Float32Array(n), S = new Float32Array(n);
+      let t0 = null, k2 = 0;
+      const merger = c.createChannelMerger(2), proc = c.createScriptProcessor(4096, 2, 1);
+      const sink = c.createGain();
+      sink.gain.value = 0;
+      sink.connect(c.destination);
+      loopBus.connect(merger, 0, 0);
+      scGain.connect(merger, 0, 1);
+      merger.connect(proc);
+      proc.connect(sink);
+      proc.onaudioprocess = (e) => {
+        if (t0 === null) t0 = e.playbackTime;
+        const a = e.inputBuffer.getChannelData(0), b = e.inputBuffer.getChannelData(1), m = Math.max(0, Math.min(a.length, n - k2));
+        L.set(a.subarray(0, m), k2);
+        S.set(b.subarray(0, m), k2);
+        k2 += a.length;
+        if (k2 >= n) {
+          loopBus.disconnect(merger);
+          scGain.disconnect(merger);
+          merger.disconnect();
+          proc.disconnect();
+          proc.onaudioprocess = null;
+          const hop = Math.round(c.sampleRate / 1e3);
+          const env = (x) => {
+            const out = [];
+            for (let i = 0; i + hop <= n; i += hop) {
+              let s = 0;
+              for (let j = i; j < i + hop; j++) s += x[j] * x[j];
+              out.push(Math.sqrt(s / hop));
+            }
+            return out;
+          };
+          resolve({ t0, sampleRate: c.sampleRate, loops: env(L), synth: env(S), clock: this.clock.start, beatLen: this.beatLen() });
+        }
+      };
+    });
+  }
+  /** 1 ms RMS envelope of the mix after the flutter gate, for `sec` seconds: shows the stutter pattern. */
+  mixEnv(sec) {
+    const c = this.ctx();
+    if (!c || !this.flutterGain) return Promise.reject(new Error("no audio"));
+    const src = this.flutterGain;
+    return new Promise((resolve) => {
+      const n = Math.ceil(sec * c.sampleRate), X = new Float32Array(n);
+      let k2 = 0;
+      const proc = c.createScriptProcessor(4096, 2, 1), sink = c.createGain();
+      sink.gain.value = 0;
+      sink.connect(c.destination);
+      src.connect(proc);
+      proc.connect(sink);
+      proc.onaudioprocess = (e) => {
+        const a = e.inputBuffer.getChannelData(0), m = Math.max(0, Math.min(a.length, n - k2));
+        X.set(a.subarray(0, m), k2);
+        k2 += a.length;
+        if (k2 >= n) {
+          src.disconnect(proc);
+          proc.disconnect();
+          proc.onaudioprocess = null;
+          const hop = Math.round(c.sampleRate / 1e3), out = [];
+          for (let i = 0; i + hop <= n; i += hop) {
+            let s = 0;
+            for (let j = i; j < i + hop; j++) s += X[j] * X[j];
+            out.push(Math.sqrt(s / hop));
+          }
+          resolve(out);
+        }
+      };
+    });
+  }
+  /** Peak / rms over `sec` seconds at the output (post-limiter), or before the limiter when `pre` is set. */
+  peak(sec, pre = false) {
+    const c = this.ctx();
+    if (!c || !this.flutterGain) return Promise.reject(new Error("no audio"));
+    const src = !pre && this.lim.node || this.flutterGain;
+    return new Promise((resolve) => {
+      const n = Math.ceil(sec * c.sampleRate);
+      let k2 = 0, peak = 0, over = 0, sum = 0;
+      const proc = c.createScriptProcessor(4096, 2, 1), sink = c.createGain();
+      sink.gain.value = 0;
+      sink.connect(c.destination);
+      src.connect(proc);
+      proc.connect(sink);
+      proc.onaudioprocess = (e) => {
+        for (let ch = 0; ch < 2; ch++) {
+          const d = e.inputBuffer.getChannelData(ch);
+          for (let i = 0; i < d.length; i++) {
+            const a = Math.abs(d[i]);
+            if (a > peak) peak = a;
+            if (a > 0.999) over++;
+            sum += a * a;
+          }
+        }
+        k2 += e.inputBuffer.length;
+        if (k2 >= n) {
+          src.disconnect(proc);
+          proc.disconnect();
+          proc.onaudioprocess = null;
+          resolve({ peak: +peak.toFixed(4), peakDb: +(20 * Math.log10(peak || 1e-9)).toFixed(2), over, rms: +Math.sqrt(sum / (2 * k2)).toFixed(4), limiter: this.lim.ready, pre });
+        }
+      };
+    });
+  }
+  /** Silence everything, stop the schedulers and close the context. The engine is not reusable afterwards. */
+  destroy() {
+    clearInterval(this.sc.timer);
+    clearInterval(this.fl.timer);
+    clearInterval(this.metro.timer);
+    clearTimeout(this.preloadTimer);
+    this.metro.on = false;
+    this.allNotesOff();
+    LOOP_ORDER.forEach((f) => this.loopStop(f));
+    this.previewStop();
+    const ac = this.ac;
+    this.ac = null;
+    if (ac && ac.state !== "closed") void ac.close().catch(() => {
+    });
+  }
+};
+
+// src/caps.ts
+var LIFT2 = 1.045;
+var DIP = 0.955;
+var KNOB_LIFT = 1.06;
+var KNOB_DIP = 0.94;
+var KNOB_DRAG = 8;
+var CapField = class {
+  constructor() {
+    this.caps = [];
+    this.raf = 0;
+    this.tick = () => {
+      let busy = false;
+      const K = 0.22, D = 0.78;
+      for (const c of this.caps) {
+        if (!c.live) continue;
+        let still;
+        if (c.loose) {
+          c.vx = (c.vx + (c.tx - c.x) * K) * D;
+          c.x += c.vx;
+          c.vy = (c.vy + (c.ty - c.y) * K) * D;
+          c.y += c.vy;
+          c.vs = (c.vs + (c.ts - c.s) * K) * D;
+          c.s += c.vs;
+          still = Math.abs(c.tx - c.x) + Math.abs(c.ty - c.y) < 0.03 && Math.abs(c.ts - c.s) < 15e-4 && Math.abs(c.vx) + Math.abs(c.vy) + Math.abs(c.vs) * 50 < 0.03;
+          if (still) {
+            c.x = c.tx;
+            c.y = c.ty;
+            c.s = c.ts;
+            c.vx = c.vy = c.vs = 0;
+          }
+          const T = "translate(" + c.x.toFixed(2) + "%," + c.y.toFixed(2) + "%) scale(" + c.s.toFixed(4) + ")";
+          c.el.style.transform = T;
+          if (c.ind) c.ind.style.transform = T + " rotate(" + c.rot.toFixed(1) + "deg)";
+        } else {
+          const rate = c.ts < c.s ? 0.42 : 0.2;
+          c.s += (c.ts - c.s) * rate;
+          still = Math.abs(c.ts - c.s) < 8e-4;
+          if (still) c.s = c.ts;
+          c.el.style.transform = "scale(" + c.s.toFixed(4) + ")";
+        }
+        if (still && !c.hover) {
+          c.live = false;
+          c.el.classList.remove("is-live");
+          c.el.style.transform = "";
+          if (c.ind) c.ind.style.transform = "rotate(" + c.rot.toFixed(1) + "deg)";
+        } else if (!still) busy = true;
+      }
+      this.raf = busy ? requestAnimationFrame(this.tick) : 0;
+    };
+  }
+  /** Lay a cap of diameter `d` over button `btn`, whose box is (x, y, w, h) in device space. */
+  add(btn, x, y, w, h, d, square = false, loose = false) {
+    const cap = document.createElement("span");
+    cap.className = "shos-cap" + (square ? " shos-cap--sq" : "");
+    const l = x + (w - d) / 2, t = y + (h - d) / 2;
+    cap.style.left = pct(l - x, w);
+    cap.style.top = pct(t - y, h);
+    cap.style.width = pct(d, w);
+    cap.style.height = pct(d, h);
+    cap.style.backgroundPosition = (-l / IMG_W * 100).toFixed(3) + "cqw " + (-t / IMG_W * 100).toFixed(3) + "cqw";
+    btn.appendChild(cap);
+    const c = { el: cap, loose, x: 0, y: 0, s: 1, vx: 0, vy: 0, vs: 0, tx: 0, ty: 0, ts: 1, hover: false, live: false, rot: -135 };
+    const lift = loose ? KNOB_LIFT : LIFT2, dip = loose ? KNOB_DIP : DIP;
+    this.caps.push(c);
+    const aim = (e) => {
+      if (!c.loose) return;
+      const r = btn.getBoundingClientRect();
+      if (!r.width) return;
+      c.tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - 0.5) * 2)) * KNOB_DRAG;
+      c.ty = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height - 0.5) * 2)) * KNOB_DRAG;
+    };
+    btn.addEventListener("pointerenter", (e) => {
+      if (e.pointerType === "touch") return;
+      c.hover = true;
+      c.ts = lift;
+      aim(e);
+      this.wake(c);
+    });
+    btn.addEventListener("pointermove", (e) => {
+      if (c.loose && c.hover) {
+        aim(e);
+        this.wake(c);
+      }
+    });
+    btn.addEventListener("pointerleave", () => {
+      c.hover = false;
+      c.tx = 0;
+      c.ty = 0;
+      c.ts = 1;
+      this.wake(c);
+    });
+    btn.addEventListener("pointerdown", () => {
+      c.ts = dip;
+      this.wake(c);
+    });
+    const release = () => {
+      c.ts = c.hover ? lift : 1;
+      this.wake(c);
+    };
+    btn.addEventListener("pointerup", release);
+    btn.addEventListener("pointercancel", release);
+    return c;
+  }
+  /** A dot near the rim that rides along with a knob cap and turns with the value. */
+  addMark(c, btn, d, w) {
+    const ind = document.createElement("span");
+    ind.className = "shos-knob-ind";
+    ind.style.left = pct((w - d) / 2, w);
+    ind.style.top = pct((w - d) / 2, w);
+    ind.style.width = pct(d, w);
+    ind.style.height = pct(d, w);
+    btn.appendChild(ind);
+    c.ind = ind;
+    c.rot = -135;
+    ind.style.transform = "rotate(-135deg)";
+  }
+  setAngle(c, deg) {
+    if (!c) return;
+    c.rot = deg;
+    if (!c.live && c.ind) c.ind.style.transform = "rotate(" + deg.toFixed(1) + "deg)";
+  }
+  wake(c) {
+    if (!c.live) {
+      c.live = true;
+      c.el.classList.add("is-live");
+    }
+    if (!this.raf) this.raf = requestAnimationFrame(this.tick);
+  }
+  destroy() {
+    cancelAnimationFrame(this.raf);
+    this.raf = 0;
+    this.caps.length = 0;
+  }
+};
+
+// src/cursor.ts
+var HOT = [5, 5];
+var CUR_W = 38.67;
+var CUR_H = 36.64;
+var SH_M = 8;
+var HIDE = 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAHElEQVR42u3BAQEAAAjDoNm/tEEOVF0AAADAsgcgPAACkdngMQAAAABJRU5ErkJggg==") 0 0, none';
+var el = null;
+var users = 0;
+var k = 1;
+var teardown = null;
+function acquireCursor(src, shadowSrc) {
+  users++;
+  if (!el && typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches) mount(src, shadowSrc);
+  return { scale: setScale, release: () => {
+    if (--users <= 0) unmount();
+  } };
+}
+function mount(src, shadowSrc) {
+  const root = document.createElement("div");
+  root.className = "shos-cursor";
+  root.setAttribute("aria-hidden", "true");
+  const sh = document.createElement("i");
+  sh.className = "shos-cursor-sh";
+  sh.style.backgroundImage = 'url("' + shadowSrc + '")';
+  const ar = document.createElement("i");
+  ar.className = "shos-cursor-ar";
+  ar.style.backgroundImage = 'url("' + src + '")';
+  root.appendChild(sh);
+  root.appendChild(ar);
+  document.body.appendChild(root);
+  el = root;
+  document.documentElement.classList.add("shos-has-cursor");
+  try {
+    document.documentElement.style.setProperty("cursor", HIDE, "important");
+    document.body.style.setProperty("cursor", HIDE, "important");
+  } catch {
+  }
+  let x = -200, y = -200;
+  const move = (e) => {
+    if (e.pointerType === "touch") {
+      root.classList.remove("is-on");
+      return;
+    }
+    x = e.clientX;
+    y = e.clientY;
+    root.style.transform = "translate3d(" + (x - HOT[0] * k).toFixed(1) + "px," + (y - HOT[1] * k).toFixed(1) + "px,0)";
+    root.classList.add("is-on");
+  };
+  const down = (e) => {
+    if (e.pointerType === "touch") return;
+    move(e);
+    root.classList.add("is-down");
+  };
+  const up = () => root.classList.remove("is-down");
+  const leave = () => root.classList.remove("is-on");
+  const enter = () => {
+    if (x > -100) root.classList.add("is-on");
+  };
+  const vis = () => {
+    if (document.hidden) up();
+  };
+  window.addEventListener("pointermove", move, { passive: true });
+  window.addEventListener("pointerdown", down, true);
+  window.addEventListener("pointerup", up, true);
+  window.addEventListener("pointercancel", up, true);
+  window.addEventListener("blur", up);
+  document.addEventListener("mouseleave", leave);
+  document.addEventListener("mouseenter", enter);
+  document.addEventListener("visibilitychange", vis);
+  teardown = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerdown", down, true);
+    window.removeEventListener("pointerup", up, true);
+    window.removeEventListener("pointercancel", up, true);
+    window.removeEventListener("blur", up);
+    document.removeEventListener("mouseleave", leave);
+    document.removeEventListener("mouseenter", enter);
+    document.removeEventListener("visibilitychange", vis);
+  };
+  setScale(k);
+}
+function unmount() {
+  users = 0;
+  if (!el) return;
+  teardown?.();
+  teardown = null;
+  el.remove();
+  el = null;
+  document.documentElement.classList.remove("shos-has-cursor");
+  try {
+    document.documentElement.style.removeProperty("cursor");
+    document.body.style.removeProperty("cursor");
+  } catch {
+  }
+}
+function setScale(scale) {
+  k = scale;
+  if (!el) return;
+  const ar = el.lastChild, sh = el.firstChild;
+  el.style.width = (CUR_W * k).toFixed(2) + "px";
+  el.style.height = (CUR_H * k).toFixed(2) + "px";
+  ar.style.transformOrigin = (HOT[0] * k).toFixed(2) + "px " + (HOT[1] * k).toFixed(2) + "px";
+  sh.style.left = (-SH_M * k).toFixed(2) + "px";
+  sh.style.top = (-SH_M * k).toFixed(2) + "px";
+  sh.style.width = ((CUR_W + 2 * SH_M) * k).toFixed(2) + "px";
+  sh.style.height = ((CUR_H + 2 * SH_M) * k).toFixed(2) + "px";
+}
+
+// src/modes.ts
+var MODES = 3;
+var state = { mode: 0, layer: null, images: [] };
+var currentMode = () => state.mode;
+function registerDeviceImage(img, src, mode) {
+  const entry = { img, src, mode };
+  state.images.push(entry);
+  if (mode === state.mode) {
+    img.src = src;
+    img.classList.add("is-on");
+  }
+  return () => {
+    const i = state.images.indexOf(entry);
+    if (i >= 0) state.images.splice(i, 1);
+  };
+}
+function layer() {
+  if (state.layer) return state.layer;
+  const l = document.createElement("div");
+  l.className = "shos-night";
+  document.body.appendChild(l);
+  state.layer = l;
+  return l;
+}
+function setMode(mode, instant = false) {
+  state.mode = (mode % MODES + MODES) % MODES;
+  const night = state.mode > 0;
+  layer();
+  if (instant) document.documentElement.classList.add("shos-no-anim");
+  document.body.classList.toggle("shos-is-night", night);
+  document.body.classList.toggle("shos-is-glow", state.mode === 2);
+  for (const d of state.images) {
+    const on = d.mode === state.mode;
+    if (on && !d.img.src) d.img.src = d.src;
+    d.img.classList.toggle("is-on", on);
+  }
+  try {
+    localStorage.setItem("shos-mode", String(state.mode));
+    localStorage.setItem("shos-night", night ? "1" : "0");
+  } catch {
+  }
+  if (instant) requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove("shos-no-anim")));
+}
+function initialMode(search) {
+  let mode = 0;
+  try {
+    const m = localStorage.getItem("shos-mode");
+    mode = m !== null ? +m : localStorage.getItem("shos-night") === "1" ? 1 : 0;
+  } catch {
+  }
+  const forced = /[?&](?:night|mode)=([0-2])/.exec(search);
+  if (forced) mode = +forced[1];
+  return (mode % MODES + MODES) % MODES;
+}
+
+// src/device.ts
+var KNOB_PARAMS = ["reverb", "cutoff", "bpm", "volume", "sidechain"];
+function ensureFont() {
+  if (document.querySelector("link[data-shos-font]")) return;
+  const l = document.createElement("link");
+  l.rel = "stylesheet";
+  l.setAttribute("data-shos-font", "");
+  l.href = "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100;400;500&display=swap";
+  document.head.appendChild(l);
+}
+function hideIn(svg, selectors) {
+  selectors.forEach((sel) => svg.querySelectorAll(sel).forEach((n) => {
+    n.style.display = "none";
+  }));
+}
+function createDevice(root, opts) {
+  if (root.__shos) return root.__shos;
+  let base = opts.assets || root.getAttribute("data-assets") || "./assets/";
+  if (base.slice(-1) !== "/") base += "/";
+  const VQ = "?v=" + opts.version;
+  const engine = new Engine({ assetBase: base, version: opts.version });
+  const caps = new CapField();
+  const listeners = [];
+  const on = (t, type, fn, o) => {
+    t.addEventListener(type, fn, o);
+    listeners.push([t, type, fn, o]);
+  };
+  const timers = [];
+  const later = (fn, ms) => {
+    const id = window.setTimeout(fn, ms);
+    timers.push(id);
+    return id;
+  };
+  const isMobile = () => root.clientWidth < 760 || typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches && root.clientWidth < 1024;
+  root.classList.add("shos");
+  ensureFont();
+  const darkSrc = root.getAttribute("data-device-dark") || base + "device-dark@2x.png" + VQ;
+  const glowSrc = root.getAttribute("data-device-glow") || base + "device-glow@2x.png" + VQ;
+  root.style.setProperty("--shos-dev-light", 'url("' + base + "device@2x.png" + VQ + '")');
+  root.style.setProperty("--shos-dev-dark", 'url("' + darkSrc + '")');
+  root.style.setProperty("--shos-dev-glow", 'url("' + glowSrc + '")');
+  const cursor = acquireCursor(base + "cursor@4x.png" + VQ, base + "cursor-shadow@4x.png" + VQ);
+  const stage = document.createElement("div");
+  stage.className = "shos-stage";
+  const img = document.createElement("img");
+  img.className = "shos-device shos-device-light";
+  img.src = base + "device@2x.png" + VQ;
+  img.alt = "SH-OS, an OP-1 style portfolio instrument";
+  img.draggable = false;
+  stage.appendChild(img);
+  const unregister = [];
+  const modeImage = (cls, src, mode) => {
+    const el2 = document.createElement("img");
+    el2.className = "shos-device " + cls;
+    el2.alt = "";
+    el2.draggable = false;
+    el2.addEventListener("load", () => root.classList.add("shos-dark-ready"));
+    el2.addEventListener("error", () => {
+      el2.remove();
+      if (mode === 1) root.classList.remove("shos-dark-ready");
+    });
+    stage.appendChild(el2);
+    unregister.push(registerDeviceImage(el2, src, mode));
+  };
+  modeImage("shos-device-dark", darkSrc, 1);
+  modeImage("shos-device-glow", glowSrc, 2);
+  const screen = document.createElement("div");
+  screen.className = "shos-screen";
+  place(screen, SCREEN_RECT[0], SCREEN_RECT[1], SCREEN_RECT[2], SCREEN_RECT[3]);
+  const scrEls = {};
+  SCREENS.forEach((name) => {
+    const s = document.createElement("div");
+    s.className = "shos-scr";
+    s.setAttribute("data-name", name);
+    screen.appendChild(s);
+    scrEls[name] = s;
+  });
+  const htmlScreen = (name, cls, html) => {
+    const el2 = document.createElement("div");
+    el2.className = "shos-scr shos-helpscr" + (cls ? " " + cls : "");
+    el2.setAttribute("data-name", name);
+    el2.innerHTML = html;
+    screen.appendChild(el2);
+    scrEls[name] = el2;
+    return el2;
+  };
+  htmlScreen(
+    "help",
+    "",
+    '<div class="shos-hc"><span>HELP — SH-OS</span><span>EXIT × · HELP · ESC</span></div><div class="shos-hh">HOW TO PLAY</div><div class="shos-hb"><p>ANY KEY SHOWS A SCREEN<br>PRESS IT AGAIN TO OPEN THE LINK</p><p>THE KEYBOARD PLAYS · DRAG IT · OR Z–M / Q–U</p><p>BLANK KEYS JAM: SOUND · LOOPS · METRONOME<br>KNOBS: REVERB · CUTOFF · BPM · VOLUME</p></div><div class="shos-hf"><b>EXIT →</b><span>CLOCK ↓ NIGHT MODE</span></div>'
+  );
+  htmlScreen(
+    "why",
+    "shos-whyscr",
+    '<div class="shos-hc"><span>WHY? · SH-OS</span><span>THE BACKSTORY</span></div><div class="shos-hh">ONCE A PRODUCER</div><div class="shos-hb"><p>' + WHY_COPY + '</p></div><div class="shos-hf"><b>BACK</b><span>WHY? AGAIN · ESC</span></div>'
+  );
+  STACK.forEach((st, i) => htmlScreen(
+    "stack:" + st.key,
+    "shos-stackscr",
+    '<div class="shos-hc"><span>' + st.label + " · STACK " + (i + 1) + "/" + STACK.length + "</span><span>" + st.tag + '</span></div><div class="shos-tools">' + st.tools.map((t) => "<div><b>" + t[0] + "</b><span>" + t[1] + "</span></div>").join("") + '</div><div class="shos-hf"><b>' + st.label + "</b><span>" + st.foot + "</span></div>"
+  ));
+  htmlScreen(
+    "beta",
+    "shos-betascr",
+    '<div class="shos-hc"><span>SLOT <i class="shos-beta-slot">1</i> · EMPTY</span><span>BETA V1.0</span></div><div class="shos-hh">SORRY, NO FEATURES YET</div><div class="shos-hb"><p>THIS IS BETA V1.0</p><p>MORE FEATURES SHIPPING SOON</p></div><div class="shos-hf"><b>BETA</b><span>◁ ▷ BROWSE · ESC = BACK</span></div>'
+  );
+  const betaSlot = screen.querySelector(".shos-beta-slot");
+  htmlScreen(
+    "mobile",
+    "shos-mobilescr",
+    '<div class="shos-hc"><span>SH-OS · MOBILE</span><span>BETA V1.0</span></div><div class="shos-hh">DESKTOP ONLY FOR NOW</div><div class="shos-hb"><p>ONLY AVAILABLE ON DESKTOP FOR NOW.</p><p>OPEN IT ON A LAPTOP TO PLAY.</p></div><div class="shos-hf"><b>SOON</b><span>MOBILE IS ON THE LIST</span></div>'
+  );
+  htmlScreen(
+    "github",
+    "shos-gitscr",
+    '<div class="shos-hc"><span>GITHUB · SOURCE</span><span>PRESS AGAIN → OPEN</span></div><div class="shos-hh">SH-OS IS OPEN SOURCE</div><div class="shos-hb"><p class="shos-git-url">' + GITHUB.path + '</p><p>WEB AUDIO · TYPESCRIPT · ONE SCRIPT TO EMBED</p></div><div class="shos-hf"><b>OPEN →</b><span>PRESS GITHUB AGAIN · ESC = BACK</span></div>'
+  );
+  const dot = document.createElement("div");
+  dot.className = "shos-rec-dot";
+  screen.appendChild(dot);
+  const caret = document.createElement("div");
+  caret.className = "shos-caret";
+  screen.appendChild(caret);
+  const ovs = [];
+  const ov = (forScreen, cls, x, y, size, o = {}) => {
+    const el2 = document.createElement("div");
+    el2.className = "shos-ov " + cls;
+    el2.setAttribute("data-for", forScreen);
+    if (o.right) el2.style.right = pct(640 - x, 640);
+    else el2.style.left = pct(x, 640);
+    el2.style.top = pct(y + size * 0.115, 320);
+    el2.style.fontSize = (size / 640 * 100).toFixed(3) + "cqw";
+    if (o.text) el2.textContent = o.text;
+    screen.appendChild(el2);
+    ovs.push(el2);
+    return el2;
+  };
+  const dateEl = ov("idle", "shos-date", 28, 58, 56);
+  const timeEl = ov("idle", "shos-time", 28, 132, 56);
+  const noteEl = ov("play", "shos-note", 612, 46, 60, { right: true, text: "C4" });
+  const muteEl = document.createElement("div");
+  muteEl.className = "shos-ov shos-mute";
+  muteEl.textContent = "MUTE";
+  const ticks = [];
+  for (let i = 0; i < 24; i++) {
+    const tk = document.createElement("div");
+    tk.className = "shos-ov shos-tick";
+    tk.setAttribute("data-for", "play");
+    tk.style.left = ((28 + i * 21.2) / 640 * 100).toFixed(3) + "%";
+    screen.appendChild(tk);
+    ticks.push(tk);
+    ovs.push(tk);
+  }
+  const lkLabel = ov("link", "shos-t-ink shos-t-med", 162, 80, 9);
+  const lkHandle = ov("link", "shos-t-crm shos-t-thin shos-t-track", 110, 130, 46);
+  const lkDomain = ov("link", "shos-t-ink shos-t-med", 552, 96, 9);
+  const lkIcon = document.createElement("div");
+  lkIcon.className = "shos-ov shos-lk-icon";
+  lkIcon.setAttribute("data-for", "link");
+  lkIcon.style.left = pct(110, 640);
+  lkIcon.style.top = pct(72, 320);
+  lkIcon.style.width = pct(40, 640);
+  lkIcon.style.height = pct(40, 320);
+  screen.appendChild(lkIcon);
+  ovs.push(lkIcon);
+  const lkRail = ov("link", "shos-rail", 28, 274, 9);
+  const jamSound = SOUND_ORDER.map((_, i) => ov("play", "shos-jam-row", 25, 82 + i * 30, 10));
+  const jamParam = KNOB_PARAMS.map((_, i) => ov("play", "shos-t-ink shos-t-med shos-jam-val", 612, 111 + i * 15, 9, { right: true }));
+  const jamLoops = ov("play", "shos-jam-loops", 363, 272, 9);
+  const SCOPE = [112, 48, 424, 210];
+  const SCOPE_CLEAR = [96, 40, 545, 264];
+  const scope = document.createElement("canvas");
+  scope.className = "shos-ov shos-scope";
+  scope.setAttribute("data-for", "play");
+  scope.style.left = pct(SCOPE[0], 640);
+  scope.style.top = pct(SCOPE[1], 320);
+  scope.style.width = pct(SCOPE[2], 640);
+  scope.style.height = pct(SCOPE[3], 320);
+  scope.width = SCOPE[2] * 2;
+  scope.height = SCOPE[3] * 2;
+  screen.appendChild(scope);
+  ovs.push(scope);
+  let scopeRaf = 0, scopeBufA = null, scopeBufB = null;
+  const trigger = (buf, n, span) => {
+    const start = n >> 2, end = n - span;
+    if (end <= start) return 0;
+    for (let i = start + 1; i < end; i++) if (buf[i - 1] <= 0 && buf[i] > 0) return i;
+    return start;
+  };
+  const drawScope = () => {
+    scopeRaf = 0;
+    if (state2.current !== "play") return;
+    if (!engine.ac || !engine.scopeMix || !engine.scopeSynth) {
+      scopeRaf = requestAnimationFrame(drawScope);
+      return;
+    }
+    const g = scope.getContext("2d"), W = scope.width, H = scope.height, n = engine.scopeMix.fftSize, span = 880;
+    if (!scopeBufA || !scopeBufB) {
+      scopeBufA = new Float32Array(n);
+      scopeBufB = new Float32Array(n);
+    }
+    engine.scopeMix.getFloatTimeDomainData(scopeBufA);
+    engine.scopeSynth.getFloatTimeDomainData(scopeBufB);
+    g.clearRect(0, 0, W, H);
+    g.strokeStyle = "#3A3A40";
+    g.lineWidth = 1.5;
+    g.setLineDash([6, 6]);
+    g.beginPath();
+    g.moveTo(0, H / 2);
+    g.lineTo(W, H / 2);
+    g.stroke();
+    g.setLineDash([]);
+    const traces = [[scopeBufA, "#E9E9EC"], [scopeBufB, "#45A8F0"]];
+    for (const [buf, colour] of traces) {
+      const t0 = trigger(buf, n, span), amp = 0.94 * H / 2;
+      g.strokeStyle = colour;
+      g.lineWidth = 2.6;
+      g.lineJoin = "round";
+      g.beginPath();
+      for (let i = 0; i < span; i++) {
+        const v = Math.max(-1, Math.min(1, buf[t0 + i]));
+        const x = i / (span - 1) * W, y = H / 2 - v * amp;
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    g.fillStyle = "#F0E8D2";
+    for (let d = 0; d < 5; d++) {
+      g.beginPath();
+      g.arc(d / 4 * (W - 10) + 5, H / 2, 5, 0, Math.PI * 2);
+      g.fill();
+    }
+    scopeRaf = requestAnimationFrame(drawScope);
+  };
+  const scopeOn = () => {
+    if (!scopeRaf) scopeRaf = requestAnimationFrame(drawScope);
+  };
+  const knobPop = document.createElement("div");
+  knobPop.className = "shos-knobpop";
+  knobPop.innerHTML = '<div class="shos-kp-val"></div><div class="shos-kp-label"></div><div class="shos-kp-bar"><i></i></div>';
+  screen.appendChild(knobPop);
+  const kpVal = knobPop.querySelector(".shos-kp-val"), kpLabel = knobPop.querySelector(".shos-kp-label"), kpBar = knobPop.querySelector(".shos-kp-bar i");
+  let kpTimer = 0;
+  const P = engine.params;
+  const knobText = (p) => {
+    if (p === "bpm") return String(P.bpm);
+    if (p === "sidechain") return Math.round(P.sidechain * 100) + "%";
+    if (p === "cutoff") {
+      const hz = cutoffHz(P.cutoff);
+      return hz >= 1e3 ? (hz / 1e3).toFixed(1) + "K" : String(Math.round(hz));
+    }
+    return Math.round(P[p] * 100) + (p === "reverb" ? "%" : "");
+  };
+  const pop = (value, label, v01) => {
+    kpVal.textContent = value;
+    kpLabel.textContent = label;
+    knobPop.classList.toggle("no-bar", v01 === void 0 || v01 === null);
+    if (v01 !== void 0 && v01 !== null) kpBar.style.width = (v01 * 100).toFixed(1) + "%";
+    knobPop.classList.add("is-on");
+    clearTimeout(kpTimer);
+    kpTimer = later(() => knobPop.classList.remove("is-on"), 1100);
+  };
+  const knobValue = (p) => p === "bpm" ? (P.bpm - BPM_MIN) / (BPM_MAX - BPM_MIN) : P[p];
+  const showKnob = (p) => pop(knobText(p), KNOB_LABEL[p], knobValue(p));
+  const hud = document.createElement("div");
+  hud.className = "shos-hud";
+  screen.appendChild(hud);
+  hud.appendChild(muteEl);
+  stage.appendChild(screen);
+  const state2 = { current: null, idleTimer: 0, lastScreen: BROWSE[0], clockTimer: 0, link: "x", lastAction: null, beforeHelp: null, beforeWhy: null, jamParam: null };
+  let muteKey = null, stopKey = null;
+  const fmtParam = (p) => {
+    if (p === "reverb") return "REV " + Math.round(P.reverb * 100) + "%";
+    if (p === "sidechain") return "SC " + Math.round(P.sidechain * 100) + "%";
+    if (p === "cutoff") {
+      const hz = cutoffHz(P.cutoff);
+      return "CUT " + (hz >= 1e3 ? (hz / 1e3).toFixed(1) + "K" : Math.round(hz));
+    }
+    if (p === "bpm") return "BPM " + P.bpm;
+    return "VOL " + Math.round(P.volume * 100);
+  };
+  const chip = (text, cls) => {
+    const b = document.createElement("b");
+    if (cls) b.className = cls;
+    b.textContent = text;
+    hud.appendChild(b);
+  };
+  const refreshJam = () => {
+    SOUND_ORDER.forEach((s, i) => {
+      jamSound[i].innerHTML = s === engine.sound ? "<b>" + SOUNDS[s].label + "</b>" : "<span>" + SOUNDS[s].label + "</span>";
+    });
+    KNOB_PARAMS.forEach((p, i) => {
+      jamParam[i].textContent = fmtParam(p);
+      jamParam[i].classList.toggle("is-hot", p === state2.jamParam);
+    });
+    jamLoops.innerHTML = LOOP_ORDER.map((f) => {
+      const idx = engine.loopIndex(f);
+      return '<span class="' + (idx >= 0 ? "is-on" : "") + '">' + LOOP_LABEL[f] + (idx >= 0 ? " " + (idx + 1) : "") + "</span>";
+    }).join("<i>·</i>") + '<i>·</i><span class="shos-jam-metro' + (engine.metro.on ? " is-on" : "") + '">● METRO</span>' + (engine.preview.src || engine.preview.name ? '<i>·</i><span class="is-on">▶ PREVIEW</span>' : "");
+    if (stopKey) stopKey.classList.toggle("is-glow", engine.anyRunning() || !!engine.preview.name);
+    hud.querySelectorAll("b").forEach((n) => n.remove());
+    LOOP_ORDER.forEach((f) => {
+      const idx = engine.loopIndex(f);
+      if (idx >= 0) chip(LOOP_LABEL[f] + " " + (idx + 1));
+    });
+    if (engine.preview.name) chip(SOUNDS[engine.preview.name].label + " ▶", "crm");
+    if (engine.metro.on) chip("● " + P.bpm, "grn");
+    if (P.sidechain > 0) chip("SC " + Math.round(P.sidechain * 100), "crm");
+    if (P.flutter > 0) chip("FLT " + Math.round(P.flutter * 100) + " · 1/" + P.flutterDiv, "crm");
+  };
+  const applyLink = () => {
+    const l = LINKS[state2.link];
+    lkLabel.textContent = l.label;
+    lkHandle.textContent = l.handle;
+    lkDomain.textContent = l.domain;
+    lkIcon.innerHTML = '<svg viewBox="0 0 40 40">' + ICONS[l.icon] + "</svg>";
+    lkRail.innerHTML = RAIL_ORDER.map((k2) => k2 === state2.link ? "<b>" + LINKS[k2].rail + "</b>" : "<span>" + LINKS[k2].rail + "</span>").join("<i>·</i>");
+  };
+  applyLink();
+  refreshJam();
+  const tickClock = () => {
+    const d = /* @__PURE__ */ new Date();
+    dateEl.textContent = d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    timeEl.textContent = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  };
+  const show = (name) => {
+    if (!scrEls[name] || name === state2.current) return;
+    if (state2.current) scrEls[state2.current].classList.remove("is-on");
+    state2.current = name;
+    screen.setAttribute("data-screen", name);
+    scrEls[name].classList.add("is-on");
+    ovs.forEach((o) => o.classList.toggle("is-on", o.getAttribute("data-for") === name && !o.classList.contains("shos-tick")));
+    guide.classList.toggle("is-on", name === "help");
+    screen.classList.add("is-switching");
+    later(() => screen.classList.remove("is-switching"), 320);
+    if (BROWSE.indexOf(name) >= 0) state2.lastScreen = name;
+    clearInterval(state2.clockTimer);
+    if (name === "idle") {
+      tickClock();
+      state2.clockTimer = window.setInterval(tickClock, 1e3);
+    }
+    if (name === "play") scopeOn();
+    armIdle();
+  };
+  const armIdle = () => {
+    clearTimeout(state2.idleTimer);
+    if (state2.current === "idle" || state2.current === "boot") return;
+    state2.idleTimer = later(() => {
+      if (engine.anyRunning()) armIdle();
+      else show("idle");
+    }, 3e4);
+  };
+  const toPlay = () => {
+    if (state2.current !== "play") {
+      state2.lastAction = null;
+      show("play");
+    } else armIdle();
+  };
+  const jamNav = () => {
+    if (state2.current === "idle" || state2.current === "boot") toPlay();
+    else armIdle();
+  };
+  const step = (dir) => {
+    let i = BROWSE.indexOf(state2.current || "");
+    if (i < 0) i = 0;
+    state2.lastAction = null;
+    show(BROWSE[(i + dir + BROWSE.length) % BROWSE.length]);
+  };
+  const pulse = () => {
+    screen.classList.add("is-switching");
+    later(() => screen.classList.remove("is-switching"), 260);
+  };
+  const toggleMute = () => {
+    engine.setMuted(!engine.muted);
+    screen.classList.toggle("is-muted", engine.muted);
+    if (muteKey) {
+      muteKey.classList.toggle("is-muted", engine.muted);
+      muteKey.setAttribute("aria-pressed", String(engine.muted));
+    }
+    pulse();
+    armIdle();
+  };
+  const openUrl = (url) => {
+    try {
+      window.open(url, "_blank", "noopener");
+    } catch {
+      location.href = url;
+    }
+  };
+  const closeHelp = () => {
+    const back = state2.beforeHelp;
+    state2.lastAction = null;
+    show(back && back !== "help" && back !== "boot" ? back : "idle");
+  };
+  const openHelp = () => {
+    if (state2.current === "help") return closeHelp();
+    state2.beforeHelp = state2.current;
+    state2.lastAction = "help";
+    show("help");
+  };
+  const closeWhy = () => {
+    const back = state2.beforeWhy;
+    state2.lastAction = null;
+    show(back && back !== "why" && back !== "help" && back !== "boot" ? back : "idle");
+  };
+  const toggleWhy = () => {
+    if (state2.current === "why") return closeWhy();
+    state2.beforeWhy = state2.current;
+    state2.lastAction = "why";
+    show("why");
+  };
+  const act = (action) => {
+    const parts = action.split(":"), name = parts[0], arg = parts[1];
+    if (name === "prev") return step(-1);
+    if (name === "next") return step(1);
+    if (name === "mute") return toggleMute();
+    if (name === "help") return openHelp();
+    if (name === "why") return toggleWhy();
+    if (name === "sound") {
+      engine.unlock();
+      engine.setSound(SOUND_ORDER[(SOUND_ORDER.indexOf(engine.sound) + 1) % SOUND_ORDER.length]);
+      engine.allNotesOff();
+      if (engine.preview.name) engine.previewPlay();
+      refreshJam();
+      pop(SOUNDS[engine.sound].label, "SOUND " + (SOUND_ORDER.indexOf(engine.sound) + 1) + "/" + SOUND_ORDER.length);
+      return jamNav();
+    }
+    if (name === "loop") {
+      const fam = arg;
+      engine.loopCycle(fam);
+      refreshJam();
+      const li = engine.loopIndex(fam);
+      pop(LOOP_LABEL[fam] + (li >= 0 ? " " + (li + 1) : " OFF"), "DRUM LOOP");
+      return jamNav();
+    }
+    if (name === "metro") {
+      engine.setMetro(!engine.metro.on);
+      refreshJam();
+      pop(engine.metro.on ? "ON" : "OFF", "METRONOME · " + P.bpm);
+      return jamNav();
+    }
+    if (name === "stopall") {
+      engine.stopAllLoops();
+      refreshJam();
+      pop("STOP", "ALL LOOPS");
+      return jamNav();
+    }
+    if (name === "preview") {
+      if (engine.preview.name) engine.previewStop();
+      else engine.previewPlay();
+      refreshJam();
+      pop(engine.preview.name ? SOUNDS[engine.sound].label + " ▶" : "STOP", "PREVIEW");
+      return jamNav();
+    }
+    let target = name, url = URLS[name] || null;
+    if (name === "stack") target = action;
+    if (name === "beta") {
+      target = "beta";
+      if (betaSlot) betaSlot.textContent = arg;
+    }
+    if (name === "link") {
+      state2.link = arg;
+      applyLink();
+      target = "link";
+      url = LINKS[arg].url;
+    }
+    if (state2.current === target && state2.lastAction === action) {
+      if (url) {
+        openUrl(url);
+        pulse();
+      }
+      return;
+    }
+    state2.lastAction = action;
+    if (state2.current === "idle" && name === "idle") return show(state2.lastScreen);
+    show(target);
+  };
+  const playClick = () => engine.playClick();
+  COMMAND_KEYS.forEach((k2) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "shos-key";
+    b.setAttribute("aria-label", k2.label);
+    b.setAttribute("data-action", k2.action);
+    place(b, OX + k2.x, OY + k2.y, k2.w, k2.h);
+    if (k2.action === "mute") caps.add(b, OX + k2.x, OY + k2.y, k2.w, k2.h, k2.w * 0.9, true);
+    else caps.add(b, OX + k2.x, OY + k2.y, k2.w, k2.h, KEY * CAP);
+    b.addEventListener("pointerenter", playClick);
+    b.addEventListener("pointerdown", () => b.classList.add("is-down"));
+    const up = () => b.classList.remove("is-down");
+    b.addEventListener("pointerup", up);
+    b.addEventListener("pointerleave", up);
+    b.addEventListener("pointercancel", up);
+    b.addEventListener("click", () => act(k2.action));
+    if (k2.action === "mute") {
+      muteKey = b;
+      b.setAttribute("aria-pressed", "false");
+    }
+    if (k2.action === "stopall") {
+      stopKey = b;
+      const glow = document.createElement("span");
+      glow.className = "shos-glow";
+      b.appendChild(glow);
+    }
+    stage.appendChild(b);
+  });
+  const keyEls = [];
+  const keyDown = (i) => {
+    if (keyEls[i].classList.contains("is-down")) return;
+    keyEls[i].classList.add("is-down");
+    engine.noteOn(i);
+    noteEl.textContent = engine.keyNoteName(i);
+    ticks[i].classList.add("is-on");
+    toPlay();
+  };
+  const keyUp = (i) => {
+    if (i === void 0 || i < 0 || !keyEls[i] || !keyEls[i].classList.contains("is-down")) return;
+    keyEls[i].classList.remove("is-down");
+    engine.noteOff(i);
+    ticks[i].classList.remove("is-on");
+  };
+  let pointerNotes = {};
+  const noteUnder = (x, y) => {
+    const el2 = document.elementFromPoint(x, y);
+    const b = el2 && el2.closest ? el2.closest(".shos-key--note") : null;
+    return b ? +(b.getAttribute("data-note") || -1) : -1;
+  };
+  PIANO.forEach((k2) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "shos-key shos-key--note" + (k2.pill ? " shos-key--pill" : " shos-key--sharp");
+    b.setAttribute("aria-label", "Note " + k2.name);
+    b.setAttribute("data-note", String(k2.note));
+    place(b, OX + k2.x, OY + k2.y, k2.w, k2.h);
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      try {
+        b.setPointerCapture(e.pointerId);
+      } catch {
+      }
+      engine.unlock();
+      pointerNotes[e.pointerId] = k2.note;
+      keyDown(k2.note);
+    });
+    b.addEventListener("pointermove", (e) => {
+      if (pointerNotes[e.pointerId] === void 0) return;
+      const n = noteUnder(e.clientX, e.clientY), cur = pointerNotes[e.pointerId];
+      if (n === cur) return;
+      if (cur >= 0) keyUp(cur);
+      pointerNotes[e.pointerId] = n;
+      if (n >= 0) keyDown(n);
+    });
+    const up = (e) => {
+      const n = pointerNotes[e.pointerId];
+      delete pointerNotes[e.pointerId];
+      if (n !== void 0) keyUp(n);
+    };
+    b.addEventListener("pointerup", up);
+    b.addEventListener("pointercancel", up);
+    b.addEventListener("lostpointercapture", up);
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+    keyEls[k2.note] = b;
+    stage.appendChild(b);
+  });
+  const releasePointer = (e) => {
+    const pe = e;
+    if (pe.pointerId !== void 0 && pointerNotes[pe.pointerId] !== void 0) {
+      keyUp(pointerNotes[pe.pointerId]);
+      delete pointerNotes[pe.pointerId];
+    }
+  };
+  const releaseAll = () => {
+    Object.keys(pointerNotes).forEach((id) => keyUp(pointerNotes[+id]));
+    pointerNotes = {};
+    engine.allNotesOff();
+    ticks.forEach((t) => t.classList.remove("is-on"));
+    keyEls.forEach((b) => b.classList.remove("is-down"));
+  };
+  on(window, "pointerup", releasePointer, true);
+  on(window, "pointercancel", releasePointer, true);
+  on(window, "mouseup", () => {
+    if (Object.keys(pointerNotes).length) releaseAll();
+  }, true);
+  on(window, "blur", releaseAll);
+  on(document, "visibilitychange", () => {
+    if (document.hidden) releaseAll();
+  });
+  const knobCaps = [];
+  const refreshKnobs = () => KNOB_PARAMS.forEach((p, i) => caps.setAngle(knobCaps[i], -135 + 270 * knobValue(p)));
+  KNOBS.forEach((e, idx) => {
+    const p = KNOB_PARAMS[idx];
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "shos-key shos-key--enc";
+    b.setAttribute("aria-label", e.name + " knob: " + p);
+    place(b, e.x, e.y, e.size, e.size);
+    const c = caps.add(b, e.x, e.y, e.size, e.size, e.cap, false, true);
+    if (p !== "sidechain") caps.addMark(c, b, e.cap, e.size);
+    knobCaps[idx] = c;
+    b.addEventListener("pointerenter", playClick);
+    let acc = 0;
+    const turn = (amount) => {
+      engine.unlock();
+      if (p === "bpm") {
+        acc += amount / 40;
+        const st = Math.trunc(acc);
+        if (!st) return;
+        acc -= st;
+        engine.setBpm(P.bpm + st);
+      } else engine.setParam(p, P[p] + amount / 1e3);
+      state2.jamParam = p;
+      refreshJam();
+      refreshKnobs();
+      showKnob(p);
+      armIdle();
+    };
+    b.addEventListener("wheel", (ev) => {
+      ev.preventDefault();
+      turn(-ev.deltaY);
+    }, { passive: false });
+    let drag = null;
+    b.addEventListener("pointerdown", (ev) => {
+      drag = { y: ev.clientY, moved: false };
+      try {
+        b.setPointerCapture(ev.pointerId);
+      } catch {
+      }
+    });
+    b.addEventListener("pointermove", (ev) => {
+      if (!drag) return;
+      const dy = drag.y - ev.clientY;
+      if (Math.abs(dy) < 1) return;
+      drag.y = ev.clientY;
+      drag.moved = true;
+      turn(dy * 8);
+    });
+    const end = () => {
+      if (drag && !drag.moved) {
+        state2.jamParam = p;
+        refreshJam();
+        toPlay();
+      }
+      drag = null;
+    };
+    b.addEventListener("pointerup", end);
+    b.addEventListener("pointercancel", end);
+    b.addEventListener("lostpointercapture", () => {
+      drag = null;
+    });
+    stage.appendChild(b);
+  });
+  refreshKnobs();
+  const strip = document.createElement("button");
+  strip.type = "button";
+  strip.className = "shos-fader";
+  strip.setAttribute("aria-label", "Flutter strip: drag for amount, tap for rate");
+  place(strip, FADER.hit[0], FADER.hit[1], FADER.hit[2], FADER.hit[3]);
+  const flutterTo = (v) => {
+    engine.setParam("flutter", v);
+    refreshJam();
+    pop(Math.round(P.flutter * 100) + "%", "FLUTTER · 1/" + P.flutterDiv, P.flutter);
+    armIdle();
+  };
+  strip.addEventListener("pointerenter", playClick);
+  strip.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    engine.unlock();
+    flutterTo(P.flutter - ev.deltaY / 1e3);
+  }, { passive: false });
+  let fd = null;
+  strip.addEventListener("pointerdown", (ev) => {
+    engine.unlock();
+    fd = { y: ev.clientY, v: P.flutter, moved: false };
+    strip.classList.add("is-down");
+    try {
+      strip.setPointerCapture(ev.pointerId);
+    } catch {
+    }
+  });
+  strip.addEventListener("pointermove", (ev) => {
+    if (!fd) return;
+    const dy = fd.y - ev.clientY;
+    if (!fd.moved && Math.abs(dy) < 2) return;
+    fd.moved = true;
+    const r = strip.getBoundingClientRect(), travel = r.height * (FADER.bottom - FADER.top) / FADER.hit[3];
+    flutterTo(fd.v + dy / travel);
+  });
+  const stripEnd = () => {
+    if (fd && !fd.moved) {
+      const div = engine.cycleFlutterDiv();
+      refreshJam();
+      pop("1/" + div, "FLUTTER · RATE");
+      armIdle();
+    }
+    fd = null;
+    strip.classList.remove("is-down");
+  };
+  strip.addEventListener("pointerup", stripEnd);
+  strip.addEventListener("pointercancel", () => {
+    fd = null;
+    strip.classList.remove("is-down");
+  });
+  strip.addEventListener("lostpointercapture", () => {
+    fd = null;
+    strip.classList.remove("is-down");
+  });
+  stage.appendChild(strip);
+  const guide = document.createElement("div");
+  guide.className = "shos-guide";
+  GUIDE.forEach((g) => {
+    const bx = document.createElement("div");
+    bx.className = "shos-gbox";
+    place(bx, g.x1 - 4, g.y1 - 4, g.x2 - g.x1 + 8, g.y2 - g.y1 + 8);
+    const tag = document.createElement("span");
+    tag.className = "shos-gtag" + (g.side === "right" ? " shos-gtag--r" : "");
+    const t = document.createElement("b");
+    t.textContent = g.title;
+    const n = document.createElement("i");
+    n.textContent = g.note;
+    tag.appendChild(t);
+    tag.appendChild(n);
+    bx.appendChild(tag);
+    guide.appendChild(bx);
+  });
+  const exitBtn = document.createElement("button");
+  exitBtn.type = "button";
+  exitBtn.className = "shos-guide-exit";
+  exitBtn.textContent = "EXIT ×";
+  exitBtn.setAttribute("aria-label", "Exit help");
+  exitBtn.addEventListener("pointerenter", playClick);
+  exitBtn.addEventListener("click", () => closeHelp());
+  guide.appendChild(exitBtn);
+  stage.appendChild(guide);
+  root.appendChild(stage);
+  on(root, "pointerenter", () => engine.preload(), { once: true });
+  const wake = () => {
+    engine.unlock();
+    engine.preload();
+  };
+  on(document, "pointerdown", wake, { once: true });
+  on(document, "keydown", wake, { once: true });
+  root.tabIndex = 0;
+  on(document, "keydown", (ev) => {
+    const e = ev;
+    if (e.key !== " " && e.code !== "Space") return;
+    const t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    e.preventDefault();
+    engine.stopAllLoops();
+    releaseAll();
+    refreshJam();
+    pop("STOP", "ALL SOUND");
+    armIdle();
+  });
+  const held = {};
+  on(root, "keydown", (ev) => {
+    const e = ev;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k2 = e.key.toLowerCase(), i = QWERTY.indexOf(k2);
+    if (i >= 0) {
+      e.preventDefault();
+      if (!held[k2]) {
+        held[k2] = true;
+        engine.unlock();
+        keyDown(i);
+      }
+      return;
+    }
+    if (e.key === "ArrowRight") {
+      step(1);
+      e.preventDefault();
+    } else if (e.key === "ArrowLeft") {
+      step(-1);
+      e.preventDefault();
+    } else if (e.key === "Escape") {
+      if (state2.current === "help") closeHelp();
+      else if (state2.current === "why") closeWhy();
+      else {
+        state2.lastAction = null;
+        show("idle");
+      }
+    }
+  });
+  on(root, "keyup", (ev) => {
+    const k2 = ev.key.toLowerCase(), i = QWERTY.indexOf(k2);
+    if (i >= 0) {
+      held[k2] = false;
+      keyUp(i);
+    }
+  });
+  let destroyed = false;
+  SCREENS.forEach((name) => {
+    fetch(base + FILES[name] + VQ).then((r) => r.text()).then((svg) => {
+      if (destroyed) return;
+      scrEls[name].innerHTML = svg;
+      const el2 = scrEls[name].querySelector("svg");
+      if (el2) {
+        el2.removeAttribute("width");
+        el2.removeAttribute("height");
+        el2.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        if (name === "idle") hideIn(el2, ['[id="2026-09-03"]', '[id="22:58"]']);
+        if (name === "play") {
+          hideIn(el2, ['[id="C4"]', 'path[stroke="#45A8F0"][stroke-width="3"]', '[id="PAD"]', '[id="DRUM"]', '[id="8BIT"]', '[id="FM"]', '[id="Rectangle"]', '[id^="ENGINE"]', '[id^="ATK"]', '[id^="REL"]', '[id^="POLY"]', '[id^="REC"]']);
+          el2.querySelectorAll("path, circle, ellipse, line, rect").forEach((p) => {
+            try {
+              const b = p.getBBox(), cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+              if (cx > SCOPE_CLEAR[0] && cx < SCOPE_CLEAR[2] && cy > SCOPE_CLEAR[1] && cy < SCOPE_CLEAR[3] && b.width < 460) p.style.display = "none";
+            } catch {
+            }
+          });
+        }
+        if (name === "link") hideIn(el2, ['[id$="SOCIAL"]', '[id^="@SPENCE"]', '[id="X.COM"]', '[id="X"]', '[id$="INSTAGRAM"]', "#Rectangle_4", 'path[stroke="#F0E8D2"][stroke-width="2.5"]']);
+      }
+      if (name === "boot" && !state2.current) {
+        const pick = /[?&]screen=([a-z]+)/.exec(location.search);
+        const lk = /[?&]link=([a-z]+)/.exec(location.search);
+        if (lk && LINKS[lk[1]]) {
+          state2.link = lk[1];
+          applyLink();
+        }
+        if (pick && scrEls[pick[1]]) {
+          show(pick[1]);
+          return;
+        }
+        show("boot");
+        later(() => show("idle"), 1800);
+      }
+    }).catch(() => {
+    });
+  });
+  const layout = () => {
+    root.classList.toggle("is-mobile", isMobile());
+    cursor.scale(Math.max(0.6, Math.min(1, root.clientWidth / IMG_W)));
+  };
+  layout();
+  on(window, "resize", layout);
+  const notice = document.createElement("div");
+  notice.className = "shos-notice";
+  notice.textContent = "Only available on desktop for now";
+  root.appendChild(notice);
+  let noticeTimer = 0;
+  const mobileBlock = (ev) => {
+    if (!isMobile()) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (ev.type !== "pointerdown") return;
+    if (state2.current !== "mobile") {
+      state2.lastAction = null;
+      show("mobile");
+    } else pulse();
+    notice.classList.add("is-on");
+    clearTimeout(noticeTimer);
+    noticeTimer = later(() => notice.classList.remove("is-on"), 2400);
+  };
+  ["pointerdown", "pointerup", "click"].forEach((t) => on(stage, t, mobileBlock, true));
+  setMode(opts.mode !== void 0 ? opts.mode : initialMode(location.search), true);
+  const instance = {
+    root,
+    engine,
+    screen: () => state2.current,
+    show,
+    act,
+    setMode: (m) => setMode(m),
+    mode: () => currentMode(),
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      listeners.forEach(([t, type, fn, o]) => t.removeEventListener(type, fn, o));
+      timers.forEach((id) => clearTimeout(id));
+      clearInterval(state2.clockTimer);
+      clearTimeout(state2.idleTimer);
+      clearTimeout(kpTimer);
+      clearTimeout(noticeTimer);
+      cancelAnimationFrame(scopeRaf);
+      scopeRaf = 0;
+      caps.destroy();
+      cursor.release();
+      unregister.forEach((u) => u());
+      engine.destroy();
+      stage.remove();
+      notice.remove();
+      root.classList.remove("shos", "is-mobile", "shos-dark-ready");
+      delete root.__shos;
+    }
+  };
+  root.__shos = instance;
+  return instance;
+}
+
+// src/index.ts
+var VERSION = "20";
+
+// react/ShOs.tsx
+import { jsx } from "react/jsx-runtime";
+function ShOs({ assets, mode, version, className, onReady }) {
+  const ref = useRef(null);
+  const ready = useRef(onReady);
+  ready.current = onReady;
+  useEffect(() => {
+    const el2 = ref.current;
+    if (!el2) return;
+    const instance = createDevice(el2, { assets, mode, version: version ?? VERSION });
+    ready.current?.(instance);
+    return () => instance.destroy();
+  }, [assets, mode, version]);
+  return /* @__PURE__ */ jsx("div", { ref, className });
+}
+
+// examples/react/app.tsx
+import { Fragment, jsx as jsx2, jsxs } from "react/jsx-runtime";
+function App() {
+  const [mounted, setMounted] = useState(true);
+  const [mode, setMode2] = useState(0);
+  const [screen, setScreen] = useState("…");
+  const onReady = (inst) => {
+    const tick = () => setScreen(inst.screen() ?? "…");
+    tick();
+    const id = window.setInterval(tick, 500);
+    const stop = inst.destroy;
+    inst.destroy = () => {
+      window.clearInterval(id);
+      stop.call(inst);
+    };
+  };
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsxs("header", { className: "ex-bar", children: [
+      /* @__PURE__ */ jsx2("strong", { children: "SH-OS in React" }),
+      /* @__PURE__ */ jsxs("label", { children: [
+        "mode ",
+        /* @__PURE__ */ jsxs("select", { value: mode, onChange: (e) => setMode2(+e.target.value), children: [
+          /* @__PURE__ */ jsx2("option", { value: 0, children: "light" }),
+          /* @__PURE__ */ jsx2("option", { value: 1, children: "dark" }),
+          /* @__PURE__ */ jsx2("option", { value: 2, children: "glow" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx2("button", { type: "button", onClick: () => setMounted((m) => !m), children: mounted ? "unmount" : "mount" }),
+      /* @__PURE__ */ jsxs("span", { children: [
+        "screen: ",
+        /* @__PURE__ */ jsx2("code", { children: mounted ? screen : "none" })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsx2("main", { children: mounted && /* @__PURE__ */ jsx2(ShOs, { assets: "../../assets/", mode, onReady }) })
+  ] });
+}
+createRoot(document.getElementById("app")).render(/* @__PURE__ */ jsx2(App, {}));

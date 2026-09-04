@@ -1,13 +1,26 @@
 {
   "name": "sh-os",
   "version": "1.0.0-beta",
-  "description": "SH-OS: an OP-1 style instrument for spencehoellen.com, built on Web Audio with no build step",
+  "description": "SH-OS: an OP-1 style instrument for spencehoellen.com. TypeScript source, a Web Audio engine, one built script to embed, a React wrapper",
   "private": true,
   "scripts": {
-    "test": "node --check sh-os.js && node --check sh-os-limiter.js && node test/smoke.js",
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run typecheck && node test/smoke.mjs && npm run build && node test/browser.mjs",
     "start": "python3 -m http.server 8787"
   },
-  "repository": { "type": "git", "url": "https://github.com/spence52602/sh-os" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/spence52602/sh-os"
+  },
   "author": "Spence Hoellen",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "esbuild": "^0.28.2",
+    "playwright": "^1.62.1",
+    "typescript": "^7.0.2"
+  },
+  "type": "module"
 }
