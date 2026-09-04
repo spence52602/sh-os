@@ -8,5 +8,6 @@
     "start": "python3 -m http.server 8787"
   },
   "repository": { "type": "git", "url": "https://github.com/spence52602/sh-os" },
-  "author": "Spence Hoellen"
+  "author": "Spence Hoellen",
+  "license": "MIT"
 }

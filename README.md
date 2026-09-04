@@ -10,7 +10,7 @@ Live: https://payments-api-spencehoellen.vercel.app/sh-os/ (the same bundle is e
 - **SOUND** steps PAD → LEAD → BASS. **PREVIEW** loops a 4-bar phrase of the current sound, in time with the drums.
 - **KICK / CLAP / HAT / TOP** each step 1 → 2 → 3 → off and launch on the next bar. **METRO** ticks. **STOP** (or the space bar) silences everything.
 - **Knobs**: REVERB, CUTOFF (40 Hz to 20 kHz), BPM (60 to 180, everything follows), VOLUME, and SIDECHAIN (the small knob by MUTE: a Kickstart-style duck on the synth).
-- **LIMITER**: the touch strip on the right rail. Drag up to push into a Pro-L style limiter.
+- **LIMITER**: the touch strip on the right rail. Coming soon: dragging it says so while the design is thought through (the Pro-L style worklet is in the repo, parked).
 - **DESIGN / AI / BUILD / SHIP** show the stack. **WHY?** tells the backstory. The **GitHub** key opens this repo. **HELP** overlays a guide. The clock in the footer cycles light, dark and glow.
 
 ## How it is built
@@ -55,4 +55,4 @@ Query flags: `?mode=0|1|2` picks light, dark or glow. `?screen=help` jumps strai
 
 Design: Spence Hoellen, in Figma. Build: Spence with Claude Code. Sounds: Serum via Ableton Live. Reverb impulse from ValhallaVintageVerb, sidechain curve measured from Kickstart 2, limiter fitted to FabFilter Pro-L 2 renders.
 
-No license has been chosen yet, so all rights are reserved for now.
+Released under the MIT License (see `LICENSE`). That covers the code and Spence's own audio renders; the EvoSounds loops are not part of the repo.
