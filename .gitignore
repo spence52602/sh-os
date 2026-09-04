@@ -2,3 +2,4 @@
 node_modules/
 # licensed EvoSounds drum loops: served by the live site, not redistributed here
 assets/audio/loops/
+.vercel
