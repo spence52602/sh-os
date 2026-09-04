@@ -29,8 +29,11 @@
     .shos-os{margin-right:24px;}
     .shos-main{padding:40px 16px 32px;}
   }
-  @media (max-width:760px){ .shos-title,.shos-os{display:none;} .shos-name{margin-right:0;white-space:nowrap;} }
-  @media (max-width:560px){ .shos-hdr{padding:20px 16px 0;font-size:11px;letter-spacing:.04em;} .shos-ver{white-space:nowrap;} }
+  @media (max-width:760px){
+    .shos-title,.shos-os{display:none;} .shos-name{margin-right:0;white-space:nowrap;}
+    .shos-page{min-height:auto;} .shos-main{flex:0 0 auto;padding:28px 12px 8px;} .shos-ftr{padding:6px 0 28px;}   /* the device sits near the top, the clock right under it */
+  }
+  @media (max-width:560px){ .shos-hdr{padding:20px 16px 0;font-size:10px;letter-spacing:.05em;} .shos-ver{white-space:nowrap;} }
 </style>
 </head>
 <body>
