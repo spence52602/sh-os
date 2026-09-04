@@ -1,6 +1,7 @@
 /* SH-OS master limiter — an AudioWorklet fitted to Spence's FabFilter Pro-L 2 renders (Transparent style, 0.25 ms
    lookahead, ~1 ms release): the gain computer looks ahead over a short window, ramps down so it is fully applied
    when the peak arrives, recovers fast, and a soft ceiling catches what remains. Stereo-linked.
+   The runtime currently drives it as a transparent safety limiter (1.5 ms / 60 ms / ceiling 0.98) with drive 1.
    Messages: { drive, ceiling, limCeiling, lookMs, relMs, soft } — all optional. */
 class ShosLimiter extends AudioWorkletProcessor {
   constructor() {

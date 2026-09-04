@@ -10,7 +10,7 @@ Live: https://payments-api-spencehoellen.vercel.app/sh-os/ (the same bundle is e
 - **SOUND** steps PAD → LEAD → BASS. **PREVIEW** loops a 4-bar phrase of the current sound, in time with the drums.
 - **KICK / CLAP / HAT / TOP** each step 1 → 2 → 3 → off and launch on the next bar. **METRO** ticks. **STOP** (or the space bar) silences everything.
 - **Knobs**: REVERB, CUTOFF (40 Hz to 20 kHz), BPM (60 to 180, everything follows), VOLUME, and SIDECHAIN (the small knob by MUTE: a Kickstart-style duck on the synth).
-- **LIMITER**: the touch strip on the right rail. Coming soon: dragging it says so while the design is thought through (the Pro-L style worklet is in the repo, parked).
+- **LIMITER**: the touch strip on the right rail is coming soon; dragging it says so. Behind the scenes a transparent safety limiter is always on the master (peaks held at −0.18 dBFS, 1.5 ms lookahead, 60 ms release), so stacked notes, loops and previews never clip.
 - **DESIGN / AI / BUILD / SHIP** show the stack. **WHY?** tells the backstory. The **GitHub** key opens this repo. **HELP** overlays a guide. The clock in the footer cycles light, dark and glow.
 
 ## Designed and built start to finish
@@ -27,7 +27,7 @@ Live: https://payments-api-spencehoellen.vercel.app/sh-os/ (the same bundle is e
 | --- | --- |
 | `index.html` | Demo page with the page chrome. A host page needs only the stylesheet, `<div data-shos data-assets="…/assets/">` and the script. |
 | `sh-os.js` | The runtime: device and hit zones (in the Figma export's pixel space), cap and knob motion, screens (SVG exports plus HTML screens), the audio graph and beat clock, the `window.SHOS` debug API. |
-| `sh-os-limiter.js` | The limiter as an AudioWorklet: a lookahead gain computer fitted to Pro-L 2 renders. |
+| `sh-os-limiter.js` | The limiter as an AudioWorklet: a lookahead gain computer, run as a transparent safety limiter today and fitted to Pro-L 2 renders for the PUSH strip. |
 | `sh-os.css` | Styles. Everything inside the screen is sized in container units so it scales with the device. |
 | `assets/` | Device renders (light, dark, glow), screen SVGs, cursor, audio. |
 

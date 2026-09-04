@@ -314,7 +314,10 @@
   // ---- LIMITER (Pro-L 2 fit): an AudioWorklet on the master; PUSH drives 0 … +18 dB into a 0.25 ms lookahead
   // limiter (ceiling +2.6 dB over the clip point, 8 ms release) that hands the last peaks to a brickwall at −0.04 dBFS —
   // the combination that matched Spence's three Pro-L renders best (envelope error ≈ 1 dB rms).
-  var LIM = { node: null, ready: false, lookMs: 0.25, relMs: 8, limCeiling: 1.343, ceiling: 0.995, soft: 0, maxDriveDb: 18 };
+  // Runtime defaults are a transparent SAFETY limiter (Spence: the mix must never fly over 0 dB): 1.5 ms lookahead, 60 ms
+  // release, peaks held at −0.18 dBFS with a brickwall at −0.04 dBFS behind it. The Pro-L 2 "push" fit (0.25 ms / 8 ms /
+  // gain-computer ceiling 1.343) returns with the PUSH strip once that ships.
+  var LIM = { node: null, ready: false, lookMs: 1.5, relMs: 60, limCeiling: 0.98, ceiling: 0.995, soft: 0, maxDriveDb: 18 };
   function driveFor(push) { return Math.pow(10, (Math.max(0, Math.min(1, push)) * LIM.maxDriveDb) / 20); }
   function initLimiter(c) {
     if (!c.audioWorklet || LIM.ready) return;
@@ -1117,6 +1120,20 @@
     muted: function () { return muted; },
     setMuted: setMuted,
     _buf: function (n) { return buffers[n] || null; },
+    // diagnostic: peak / rms over `sec` seconds at the output (post-limiter), or at the master (pre-limiter) when `pre` is set
+    _peak: function (sec, pre) {
+      var c = ctx(); if (!c) return Promise.reject();
+      return new Promise(function (resolve) {
+        var src = (!pre && LIM.node) || master, n = Math.ceil(sec * c.sampleRate), k = 0, peak = 0, over = 0, sum = 0;
+        var proc = c.createScriptProcessor(4096, 2, 1), sink = c.createGain(); sink.gain.value = 0; sink.connect(c.destination);
+        src.connect(proc); proc.connect(sink);
+        proc.onaudioprocess = function (e) {
+          for (var ch = 0; ch < 2; ch++) { var d = e.inputBuffer.getChannelData(ch); for (var i = 0; i < d.length; i++) { var a = Math.abs(d[i]); if (a > peak) peak = a; if (a > 0.999) over++; sum += a * a; } }
+          k += e.inputBuffer.length;
+          if (k >= n) { src.disconnect(proc); proc.disconnect(); proc.onaudioprocess = null; resolve({ peak: +peak.toFixed(4), peakDb: +(20 * Math.log10(peak || 1e-9)).toFixed(2), over: over, rms: +Math.sqrt(sum / (2 * k)).toFixed(4), limiter: LIM.ready, pre: !!pre }); }
+        };
+      });
+    },
     params: function () { return { reverb: PARAMS.reverb, cutoff: PARAMS.cutoff, bpm: PARAMS.bpm, volume: PARAMS.volume, sidechain: PARAMS.sidechain, push: PARAMS.push, limiter: LIM.ready, sound: sound, loops: LOOP_ORDER.map(loopIndex), loopsLive: LOOP_ORDER.map(function (f) { return !!(loopState[f] && loopState[f].src); }), metro: metro.on, lastLaunch: clock.lastLaunch || null, beatLen: 60 / PARAMS.bpm, starts: { clock: clock.start, kick: loopState.kick ? loopState.kick.at : null, preview: preview.src ? preview.at : null }, preview: preview.name, previewLoop: preview.src ? [preview.src.loop, +preview.src.loopEnd.toFixed(3), +preview.src.playbackRate.value.toFixed(3)] : null, ir: !!(convolver && convolver.buffer), clock: clock.start }; },
     set: setParam, setBpm: setBpm, setSound: setSound,
     night: function (on) { if (on !== undefined) setNight(on); return night.on; },
