@@ -2,7 +2,7 @@
 
 An OP-1 style instrument for [spencehoellen.com](https://spencehoellen.com). Spence designed the device in Figma; this is the web build: the render, exact hit zones over it, a screen system and a Web Audio engine. TypeScript source, one built script to embed, no runtime dependencies, and a typed React wrapper for hosts that mount from code.
 
-Live: https://payments-api-spencehoellen.vercel.app/sh-os/ (the same bundle is embedded on the portfolio site).
+Live: https://spencehoellen-os.webflow.io (the site) and https://payments-api-spencehoellen.vercel.app/sh-os/ (the bare demo page that serves the bundle).
 
 ## Play it
 
